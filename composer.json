@@ -1,6 +1,7 @@
 {
     "name": "pivotphp/reactphp",
     "description": "ReactPHP integration for PivotPHP - Continuous runtime execution for high-performance APIs",
+    "version": "0.0.1",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -19,7 +20,7 @@
     ],
     "require": {
         "php": "^8.1",
-        "pivotphp/core": "dev-main",
+        "pivotphp/core": "^1.0",
         "react/http": "^1.9",
         "react/socket": "^1.14",
         "react/event-loop": "^1.5",

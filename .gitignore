@@ -22,3 +22,5 @@ Thumbs.db
 /.psalm/
 /infection.log
 /infection-log.txt
+*claude*
+CLAUDE.md
