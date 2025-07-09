@@ -1,6 +1,12 @@
 # PivotPHP ReactPHP Extension
 
+[![Latest Stable Version](https://poser.pugx.org/pivotphp/reactphp/v/stable)](https://packagist.org/packages/pivotphp/reactphp)
+[![Total Downloads](https://poser.pugx.org/pivotphp/reactphp/downloads)](https://packagist.org/packages/pivotphp/reactphp)
+[![License](https://poser.pugx.org/pivotphp/reactphp/license)](https://packagist.org/packages/pivotphp/reactphp)
+
 A high-performance continuous runtime extension for PivotPHP using ReactPHP's event-driven, non-blocking I/O model.
+
+**Current Version: 0.0.1** - [View on Packagist](https://packagist.org/packages/pivotphp/reactphp)
 
 ## Features
 
