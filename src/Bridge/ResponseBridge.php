@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PivotPHP\ReactPHP\Bridge;
 
-use PivotPHP\ReactPHP\Adapter\Psr7CompatibilityAdapter;
 use Psr\Http\Message\ResponseInterface;
 use React\Http\Message\Response as ReactResponse;
 use React\Stream\ReadableResourceStream;
@@ -14,14 +13,7 @@ final class ResponseBridge
 {
     public function convertToReact(ResponseInterface $psrResponse): ReactResponse
     {
-        // Use the adapter to ensure we get a proper React response
-        $reactResponse = Psr7CompatibilityAdapter::unwrapResponse($psrResponse);
-
-        if ($reactResponse instanceof ReactResponse) {
-            return $reactResponse;
-        }
-
-        // Fallback: create a new React response
+        // Convert PSR-7 Response to ReactPHP Response
         $headers = [];
         foreach ($psrResponse->getHeaders() as $name => $values) {
             $headers[$name] = implode(', ', $values);

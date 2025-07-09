@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use PivotPHP\Core\Application;
+use PivotPHP\Core\Core\Application;
 use PivotPHP\Core\Http\Response;
 use PivotPHP\Core\Routing\Router;
 use PivotPHP\ReactPHP\Providers\ReactPHPServiceProvider;
@@ -14,9 +14,9 @@ use Psr\Http\Message\ServerRequestInterface;
 
 $app = new Application(__DIR__);
 
-$app->register(new ReactPHPServiceProvider());
+$app->register(ReactPHPServiceProvider::class);
 
-$router = $app->get(Router::class);
+$router = $app->make(Router::class);
 
 $router->get('/', function (): ResponseInterface {
     return Response::json([
@@ -71,10 +71,10 @@ $router->get('/benchmark', function (): ResponseInterface {
     ]);
 });
 
-$app->addGlobalMiddleware(function (ServerRequestInterface $request, callable $next): ResponseInterface {
+$app->use(function (ServerRequestInterface $request, ResponseInterface $response, callable $next): ResponseInterface {
     $start = microtime(true);
     
-    $response = $next($request);
+    $response = $next($request, $response);
     
     $duration = round((microtime(true) - $start) * 1000, 2);
     
@@ -83,7 +83,7 @@ $app->addGlobalMiddleware(function (ServerRequestInterface $request, callable $n
         ->withHeader('X-Server', 'PivotPHP/ReactPHP');
 });
 
-$server = $app->get(ReactServer::class);
+$server = $app->make(ReactServer::class);
 
 $address = $_SERVER['argv'][1] ?? '0.0.0.0:8080';
 

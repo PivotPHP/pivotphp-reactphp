@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use PivotPHP\Core\Application;
+use PivotPHP\Core\Core\Application;
 use PivotPHP\Core\Http\Response;
 use PivotPHP\Core\Routing\Router;
 use PivotPHP\ReactPHP\Providers\ReactPHPServiceProvider;
@@ -17,10 +17,10 @@ use React\Http\Browser;
 
 $app = new Application(__DIR__);
 
-$app->register(new ReactPHPServiceProvider());
+$app->register(ReactPHPServiceProvider::class);
 
-$router = $app->get(Router::class);
-$loop = $app->get(LoopInterface::class);
+$router = $app->make(Router::class);
+$loop = $app->make(LoopInterface::class);
 $browser = new Browser(null, $loop);
 
 $router->get('/async/fetch', function () use ($browser): Promise {
@@ -137,7 +137,7 @@ $router->get('/async/periodic', function (ServerRequestInterface $request) use (
     ]);
 });
 
-$server = $app->get(ReactServer::class);
+$server = $app->make(ReactServer::class);
 
 $address = $_SERVER['argv'][1] ?? '0.0.0.0:8080';
 
