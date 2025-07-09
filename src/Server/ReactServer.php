@@ -37,10 +37,10 @@ final class ReactServer
         $this->loop = $loop ?? Loop::get();
         $this->logger = $logger ?? new NullLogger();
         $this->config = array_merge($this->getDefaultConfig(), $config);
-        
+
         $this->requestBridge = new RequestBridge();
         $this->responseBridge = new ResponseBridge();
-        
+
         $this->initializeHttpServer();
     }
 
@@ -48,13 +48,13 @@ final class ReactServer
     {
         $this->socketServer = new SocketServer($address, [], $this->loop);
         $this->httpServer->listen($this->socketServer);
-        
+
         $this->logger->info('ReactPHP server started', [
             'address' => $address,
             'pid' => getmypid(),
             'memory' => memory_get_usage(true),
         ]);
-        
+
         $this->registerSignalHandlers();
         $this->loop->run();
     }
@@ -62,10 +62,10 @@ final class ReactServer
     public function stop(): void
     {
         $this->logger->info('Stopping ReactPHP server...');
-        
+
         $this->socketServer->close();
         $this->loop->stop();
-        
+
         $this->logger->info('ReactPHP server stopped');
     }
 
@@ -77,25 +77,25 @@ final class ReactServer
     private function initializeHttpServer(): void
     {
         $middleware = [];
-        
+
         if ($this->config['streaming']) {
             $middleware[] = new \React\Http\Middleware\StreamingRequestMiddleware();
         }
-        
+
         if ($this->config['request_body_buffer_size'] !== null) {
             $middleware[] = new \React\Http\Middleware\RequestBodyBufferMiddleware(
                 $this->config['request_body_buffer_size']
             );
         }
-        
+
         if ($this->config['request_body_size_limit'] !== null) {
             $middleware[] = new \React\Http\Middleware\LimitConcurrentRequestsMiddleware(
                 $this->config['max_concurrent_requests']
             );
         }
-        
+
         $middleware[] = [$this, 'handleRequest'];
-        
+
         $this->httpServer = new HttpServer($this->loop, ...$middleware);
     }
 
@@ -104,15 +104,15 @@ final class ReactServer
         return new Promise(function ($resolve, $reject) use ($request) {
             try {
                 $startTime = microtime(true);
-                
+
                 $psrRequest = $this->requestBridge->convertFromReact($request);
-                
+
                 $psrResponse = $this->application->handle($psrRequest);
-                
+
                 $reactResponse = $this->responseBridge->convertToReact($psrResponse);
-                
+
                 $duration = (microtime(true) - $startTime) * 1000;
-                
+
                 $this->logger->info('Request handled', [
                     'method' => $request->getMethod(),
                     'uri' => (string) $request->getUri(),
@@ -120,14 +120,14 @@ final class ReactServer
                     'duration_ms' => round($duration, 2),
                     'memory' => memory_get_usage(true),
                 ]);
-                
+
                 $resolve($reactResponse);
             } catch (Throwable $e) {
                 $this->logger->error('Request handling failed', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                
+
                 $resolve(new ReactResponse(
                     500,
                     ['Content-Type' => 'application/json'],
@@ -145,12 +145,12 @@ final class ReactServer
         if (!function_exists('pcntl_signal')) {
             return;
         }
-        
+
         $handler = function (int $signal) {
             $this->logger->info('Received signal', ['signal' => $signal]);
             $this->stop();
         };
-        
+
         $this->loop->addSignal(SIGTERM, $handler);
         $this->loop->addSignal(SIGINT, $handler);
     }

@@ -35,14 +35,14 @@ final class ServeCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        
+
         $host = $input->getOption('host');
         $port = $input->getOption('port');
         $workers = (int) $input->getOption('workers');
         $env = $input->getOption('env');
-        
+
         $address = sprintf('%s:%s', $host, $port);
-        
+
         $io->title('PivotPHP ReactPHP Server');
         $io->text([
             sprintf('Environment: <info>%s</info>', $env),
@@ -50,12 +50,12 @@ final class ServeCommand extends Command
             sprintf('Memory Limit: <info>%s</info>', ini_get('memory_limit')),
             '',
         ]);
-        
+
         if ($workers > 1) {
             $io->warning('Multi-worker mode is experimental and may not work as expected.');
             return $this->runMultiWorker($io, $address, $workers);
         }
-        
+
         return $this->runSingleWorker($io, $address);
     }
 
@@ -63,25 +63,25 @@ final class ServeCommand extends Command
     {
         try {
             $server = $this->container->get(ReactServer::class);
-            
+
             $io->success(sprintf('Server running on http://%s', $address));
             $io->text('Press Ctrl+C to stop the server');
             $io->newLine();
-            
+
             $this->container->get('events')->dispatch('server.starting', [$this->container]);
-            
+
             $server->listen($address);
-            
+
             $this->container->get('events')->dispatch('server.stopped', [$this->container]);
-            
+
             return Command::SUCCESS;
         } catch (\Throwable $e) {
             $io->error(sprintf('Failed to start server: %s', $e->getMessage()));
-            
+
             if ($this->container->get('config')->get('app.debug', false)) {
                 $io->text($e->getTraceAsString());
             }
-            
+
             return Command::FAILURE;
         }
     }
@@ -90,7 +90,7 @@ final class ServeCommand extends Command
     {
         $io->error('Multi-worker mode is not yet implemented.');
         $io->text('Please use --workers=1 for now.');
-        
+
         return Command::FAILURE;
     }
 }

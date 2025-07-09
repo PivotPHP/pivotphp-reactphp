@@ -16,11 +16,11 @@ final class ResponseBridge
     {
         // Use the adapter to ensure we get a proper React response
         $reactResponse = Psr7CompatibilityAdapter::unwrapResponse($psrResponse);
-        
+
         if ($reactResponse instanceof ReactResponse) {
             return $reactResponse;
         }
-        
+
         // Fallback: create a new React response
         $headers = [];
         foreach ($psrResponse->getHeaders() as $name => $values) {
@@ -28,7 +28,7 @@ final class ResponseBridge
         }
 
         $body = $psrResponse->getBody();
-        
+
         if ($body->isSeekable()) {
             $body->rewind();
         }

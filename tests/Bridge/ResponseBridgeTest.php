@@ -60,7 +60,7 @@ final class ResponseBridgeTest extends TestCase
     {
         $data = ['status' => 'success', 'data' => ['id' => 1, 'name' => 'Test']];
         $json = json_encode($data);
-        
+
         $psrResponse = $this->responseFactory->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->streamFactory->createStream($json));
@@ -69,7 +69,7 @@ final class ResponseBridgeTest extends TestCase
 
         $this->assertEquals('application/json', $reactResponse->getHeaderLine('Content-Type'));
         $this->assertEquals($json, (string) $reactResponse->getBody());
-        
+
         $decoded = json_decode((string) $reactResponse->getBody(), true);
         $this->assertEquals($data, $decoded);
     }
@@ -89,7 +89,7 @@ final class ResponseBridgeTest extends TestCase
     public function testConvertLargeResponse(): void
     {
         $largeContent = str_repeat('Lorem ipsum dolor sit amet. ', 1000);
-        
+
         $psrResponse = $this->responseFactory->createResponse(200)
             ->withHeader('Content-Length', (string) strlen($largeContent))
             ->withBody($this->streamFactory->createStream($largeContent));

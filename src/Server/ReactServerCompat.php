@@ -49,11 +49,11 @@ final class ReactServerCompat
         }
 
         $this->setupSignalHandlers();
-        
+
         $host = $this->config['host'];
         $port = $this->config['port'];
         $address = "{$host}:{$port}";
-        
+
         $this->logger->info('Starting ReactPHP server', [
             'address' => $address,
             'workers' => $this->config['workers'],
@@ -93,20 +93,20 @@ final class ReactServerCompat
                 $uri = (string) $reactRequest->getUri();
                 $headers = $reactRequest->getHeaders();
                 $body = (string) $reactRequest->getBody();
-                
+
                 // Parse URI
                 $parsedUrl = parse_url($uri);
                 $path = $parsedUrl['path'] ?? '/';
                 $query = $parsedUrl['query'] ?? '';
-                
+
                 // Create PivotPHP Request manually
                 $pivotRequest = new \PivotPHP\Core\Http\Request($method, $path, $path);
-                
+
                 // Set headers
                 foreach ($headers as $name => $values) {
                     $pivotRequest->headers->set($name, is_array($values) ? implode(', ', $values) : $values);
                 }
-                
+
                 // Parse query params
                 if ($query) {
                     parse_str($query, $queryParams);
@@ -114,11 +114,11 @@ final class ReactServerCompat
                         $pivotRequest->query->$key = $value;
                     }
                 }
-                
+
                 // Parse body
                 if ($body) {
                     $contentType = $pivotRequest->headers->get('content-type', '');
-                    
+
                     if (str_contains($contentType, 'application/json')) {
                         $parsedBody = json_decode($body, true);
                         if (is_array($parsedBody)) {
@@ -133,29 +133,29 @@ final class ReactServerCompat
                         }
                     }
                 }
-                
+
                 // Create PivotPHP Response
                 $pivotResponse = new \PivotPHP\Core\Http\Response();
-                
+
                 // Find and execute route
                 $route = \PivotPHP\Core\Routing\Router::identify($method, $path);
-                
+
                 if ($route) {
                     // Execute route handler
                     $handler = $route['handler'];
-                    
+
                     // Capture output
                     ob_start();
                     $handler($pivotRequest, $pivotResponse);
                     $output = ob_get_clean();
-                    
+
                     // Create React response manually
                     $reactResponse = new \React\Http\Message\Response(
                         200,
                         ['Content-Type' => 'application/json'],
                         $output
                     );
-                    
+
                     $resolve($reactResponse);
                 } else {
                     // 404 Not Found
@@ -164,22 +164,21 @@ final class ReactServerCompat
                         ['Content-Type' => 'application/json'],
                         json_encode(['error' => 'Not Found'])
                     );
-                    
+
                     $resolve($reactResponse);
                 }
-                
             } catch (\Exception $e) {
                 $this->logger->error('Error handling request', [
                     'error' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]);
-                
+
                 $reactResponse = new \React\Http\Message\Response(
                     500,
                     ['Content-Type' => 'application/json'],
                     json_encode(['error' => 'Internal Server Error'])
                 );
-                
+
                 $resolve($reactResponse);
             }
         });
@@ -218,7 +217,7 @@ final class ReactServerCompat
 
         pcntl_signal(SIGTERM, $handler);
         pcntl_signal(SIGINT, $handler);
-        
+
         // Enable async signals
         pcntl_async_signals(true);
     }

@@ -29,26 +29,26 @@ final class RequestBridge
         $originalServer = $_SERVER ?? [];
         $originalGet = $_GET ?? [];
         $originalPost = $_POST ?? [];
-        
+
         try {
             // Extract data from React request
             $method = $reactRequest->getMethod();
             $uri = $reactRequest->getUri();
             $path = $uri->getPath();
-            
+
             // Prepare $_SERVER for headers
             $_SERVER = [];
             $_SERVER['REQUEST_METHOD'] = $method;
             $_SERVER['REQUEST_URI'] = $uri->getPath() . ($uri->getQuery() ? '?' . $uri->getQuery() : '');
             $_SERVER['QUERY_STRING'] = $uri->getQuery() ?? '';
-            
+
             // Convert headers to $_SERVER format
             foreach ($reactRequest->getHeaders() as $name => $values) {
                 $value = is_array($values) ? implode(', ', $values) : $values;
                 $headerName = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
                 $_SERVER[$headerName] = $value;
             }
-            
+
             // Handle special headers
             if ($reactRequest->hasHeader('Content-Type')) {
                 $_SERVER['CONTENT_TYPE'] = $reactRequest->getHeaderLine('Content-Type');
@@ -56,10 +56,10 @@ final class RequestBridge
             if ($reactRequest->hasHeader('Content-Length')) {
                 $_SERVER['CONTENT_LENGTH'] = $reactRequest->getHeaderLine('Content-Length');
             }
-            
+
             // Set query parameters
             $_GET = $reactRequest->getQueryParams();
-            
+
             // Set body parameters
             $_POST = [];
             $parsedBody = $reactRequest->getParsedBody();
@@ -72,7 +72,7 @@ final class RequestBridge
                 $body = (string) $reactRequest->getBody();
                 if ($body) {
                     $contentType = $reactRequest->getHeaderLine('content-type');
-                    
+
                     if (str_contains($contentType, 'application/json')) {
                         $decoded = json_decode($body, true);
                         if (is_array($decoded)) {
@@ -83,12 +83,11 @@ final class RequestBridge
                     }
                 }
             }
-            
+
             // Create PivotPHP Request (will read from globals)
             $pivotRequest = new \PivotPHP\Core\Http\Request($method, $path, $path);
-            
+
             return $pivotRequest;
-            
         } finally {
             // Restore original global state
             $_SERVER = $originalServer;

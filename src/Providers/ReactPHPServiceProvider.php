@@ -72,10 +72,13 @@ final class ReactPHPServiceProvider extends ServiceProvider
     private function registerMiddleware(): void
     {
         // TODO: Implement middleware extension when Application supports it
-        // $this->app->extend('middleware.global', static function (array $middleware, ContainerInterface $container): array {
-        //     $reactMiddleware = $container->get('config')->get('reactphp.middleware', []);
-        //     return array_merge($middleware, $reactMiddleware);
-        // });
+        // $this->app->extend(
+        //     'middleware.global',
+        //     static function (array $middleware, ContainerInterface $container): array {
+        //         $reactMiddleware = $container->get('config')->get('reactphp.middleware', []);
+        //         return array_merge($middleware, $reactMiddleware);
+        //     }
+        // );
     }
 
     private function publishConfiguration(): void
@@ -90,7 +93,7 @@ final class ReactPHPServiceProvider extends ServiceProvider
     private function registerEventListeners(): void
     {
         $events = $this->app->make('events');
-        
+
         $events->listen('server.starting', static function (ContainerInterface $container): void {
             $logger = $container->get('logger');
             $logger->info('ReactPHP server is starting...', [

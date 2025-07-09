@@ -90,7 +90,7 @@ final class RequestBridgeTest extends TestCase
             ['Content-Type' => 'application/x-www-form-urlencoded'],
             ''
         );
-        
+
         $reactRequest = $reactRequest->withParsedBody($parsedBody);
 
         $pivotRequest = $this->bridge->convertFromReact($reactRequest);

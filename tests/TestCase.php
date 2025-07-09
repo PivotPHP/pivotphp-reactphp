@@ -27,7 +27,7 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->loop = Loop::get();
         $this->requestFactory = new RequestFactory();
         $this->responseFactory = new ResponseFactory();
@@ -40,21 +40,21 @@ abstract class TestCase extends BaseTestCase
     protected function tearDown(): void
     {
         $this->loop->stop();
-        
+
         parent::tearDown();
     }
 
     protected function createApplication(): Application
     {
         $app = new Application(__DIR__ . '/fixtures');
-        
+
         $app->singleton('loop', fn () => $this->loop);
         $app->singleton('request.factory', fn () => $this->requestFactory);
         $app->singleton('response.factory', fn () => $this->responseFactory);
         $app->singleton('server_request.factory', fn () => $this->serverRequestFactory);
         $app->singleton('stream.factory', fn () => $this->streamFactory);
         $app->singleton('uri.factory', fn () => $this->uriFactory);
-        
+
         return $app;
     }
 
