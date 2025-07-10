@@ -91,6 +91,25 @@ Performance tests are marked as skipped by default to prevent accidental executi
 
 # Run with custom memory limit
 php -d memory_limit=1G vendor/bin/phpunit -c phpunit-performance.xml
+
+# Run manual stress tests (recommended)
+php scripts/stress-test.php
+```
+
+### Manual Stress Testing
+
+For comprehensive stress testing, use the dedicated manual script:
+
+```bash
+# Run all stress tests
+php scripts/stress-test.php
+
+# The script includes:
+# - High concurrent requests testing
+# - Memory usage monitoring under load
+# - CPU intensive workload testing
+# - Large response handling
+# - Error recovery validation
 ```
 
 ### Continuous Integration
