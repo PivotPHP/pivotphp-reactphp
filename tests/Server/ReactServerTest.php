@@ -32,15 +32,11 @@ final class ReactServerTest extends TestCase
         self::assertSame($this->loop, $this->server->getLoop());
 
         // Test that server can be created without throwing exceptions
-        $serverAddress = '127.0.0.1:0'; // Port 0 = let system choose available port
+        self::assertInstanceOf(ReactServer::class, $this->server);
 
-        try {
-            // This should work without blocking
-            self::assertInstanceOf(ReactServer::class, $this->server);
-            self::assertTrue(true); // Server creation succeeded
-        } catch (\Throwable $e) {
-            self::fail('Server creation should not throw exceptions: ' . $e->getMessage());
-        }
+        // Test that server can be stopped without throwing exceptions
+        $this->server->stop();
+        // If no exception is thrown, the test passes
     }
 
     public function testServerConfiguration(): void
@@ -70,11 +66,9 @@ final class ReactServerTest extends TestCase
     public function testServerStopBeforeStart(): void
     {
         // Test that stopping a server that never started doesn't cause issues
-        try {
-            $this->server->stop();
-            self::assertTrue(true); // Stop should not throw exceptions
-        } catch (\Throwable $e) {
-            self::fail('Server stop should not throw exceptions when server was never started: ' . $e->getMessage());
-        }
+        self::expectNotToPerformAssertions();
+
+        $this->server->stop();
+        // If no exception is thrown, the test passes
     }
 }
