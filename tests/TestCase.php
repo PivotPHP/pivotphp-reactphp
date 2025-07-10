@@ -23,6 +23,7 @@ abstract class TestCase extends BaseTestCase
     protected ServerRequestFactory $serverRequestFactory;
     protected StreamFactory $streamFactory;
     protected UriFactory $uriFactory;
+    private int $initialBufferLevel;
 
     protected function setUp(): void
     {
@@ -91,10 +92,12 @@ abstract class TestCase extends BaseTestCase
             define('PHPUNIT_TESTSUITE', true);
         }
 
-        // Start output buffering to capture any unexpected output
-        if (ob_get_level() === 0) {
-            ob_start();
-        }
+        // Store the initial buffer level to track how many buffers we add
+        $this->initialBufferLevel = ob_get_level();
+
+        // Always start a new output buffer for test isolation
+        // This ensures consistent behavior regardless of existing buffers
+        ob_start();
     }
 
     /**
@@ -118,7 +121,8 @@ abstract class TestCase extends BaseTestCase
      */
     private function cleanOutputBuffer(): void
     {
-        while (ob_get_level() > 0) {
+        // Only clean buffers that we started, maintaining the original buffer level
+        while (ob_get_level() > $this->initialBufferLevel) {
             ob_end_clean();
         }
     }
