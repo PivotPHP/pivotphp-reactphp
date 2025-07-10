@@ -291,6 +291,28 @@ protected function tearDown(): void
 }
 ```
 
+### 5. Test Quality Improvements
+
+**Recent Enhancements** (v0.0.2+):
+
+1. **Output Buffer Isolation**: TestCase now properly manages output buffers to prevent test interference
+2. **Callback Verification**: AssertionHelper provides reliable callback testing utilities
+3. **Specific Assertions**: Tests use exact status codes instead of ranges for clear expectations
+4. **PHPUnit Best Practices**: Proper instance method usage for `expectNotToPerformAssertions()`
+
+```php
+// ✅ Improved callback testing
+[$wrapper, $verifier] = AssertionHelper::createCallbackVerifier($this, $callback, $expectedArgs);
+$result = $wrapper('arg1', 'arg2');
+$verifier(); // Verify callback was called with correct arguments
+
+// ✅ Specific status code assertions
+$this->assertEquals(400, $response->getStatusCode()); // Not 400 || 500
+
+// ✅ Proper header testing without automatic headers
+$request = (new ServerRequest('GET', new Uri('http://example.com')))->withoutHeader('Host');
+```
+
 ## Performance Validation
 
 ### Benchmarking Results

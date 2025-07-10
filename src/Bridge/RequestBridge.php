@@ -6,7 +6,8 @@ namespace PivotPHP\ReactPHP\Bridge;
 
 use PivotPHP\Core\Http\Psr7\Factory\ServerRequestFactory;
 use PivotPHP\Core\Http\Psr7\Factory\StreamFactory;
-use PivotPHP\ReactPHP\Adapter\Psr7CompatibilityAdapter;
+use PivotPHP\Core\Http\Psr7\Factory\UriFactory;
+use PivotPHP\Core\Http\Psr7\Factory\UploadedFileFactory;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UploadedFileInterface;
@@ -17,84 +18,88 @@ final class RequestBridge
     private ServerRequestFactory $requestFactory;
     private StreamFactory $streamFactory;
 
-    public function __construct(?ServerRequestFactory $requestFactory = null, ?StreamFactory $streamFactory = null)
-    {
+    public function __construct(
+        ?ServerRequestFactory $requestFactory = null,
+        ?StreamFactory $streamFactory = null
+    ) {
         $this->requestFactory = $requestFactory ?? new ServerRequestFactory();
         $this->streamFactory = $streamFactory ?? new StreamFactory();
     }
 
-    public function convertFromReact(ServerRequestInterface $reactRequest): \PivotPHP\Core\Http\Request
+    public function convertFromReact(ServerRequestInterface $reactRequest): ServerRequestInterface
     {
-        // Save current global state
-        $originalServer = $_SERVER ?? [];
-        $originalGet = $_GET ?? [];
-        $originalPost = $_POST ?? [];
-        
-        try {
-            // Extract data from React request
-            $method = $reactRequest->getMethod();
-            $uri = $reactRequest->getUri();
-            $path = $uri->getPath();
-            
-            // Prepare $_SERVER for headers
-            $_SERVER = [];
-            $_SERVER['REQUEST_METHOD'] = $method;
-            $_SERVER['REQUEST_URI'] = $uri->getPath() . ($uri->getQuery() ? '?' . $uri->getQuery() : '');
-            $_SERVER['QUERY_STRING'] = $uri->getQuery() ?? '';
-            
-            // Convert headers to $_SERVER format
-            foreach ($reactRequest->getHeaders() as $name => $values) {
-                $value = is_array($values) ? implode(', ', $values) : $values;
-                $headerName = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
-                $_SERVER[$headerName] = $value;
-            }
-            
-            // Handle special headers
-            if ($reactRequest->hasHeader('Content-Type')) {
-                $_SERVER['CONTENT_TYPE'] = $reactRequest->getHeaderLine('Content-Type');
-            }
-            if ($reactRequest->hasHeader('Content-Length')) {
-                $_SERVER['CONTENT_LENGTH'] = $reactRequest->getHeaderLine('Content-Length');
-            }
-            
-            // Set query parameters
-            $_GET = $reactRequest->getQueryParams();
-            
-            // Set body parameters
-            $_POST = [];
-            $parsedBody = $reactRequest->getParsedBody();
-            if (is_array($parsedBody)) {
-                $_POST = $parsedBody;
-            } elseif (is_object($parsedBody)) {
-                $_POST = (array) $parsedBody;
-            } else {
-                // Handle raw body content
-                $body = (string) $reactRequest->getBody();
-                if ($body) {
-                    $contentType = $reactRequest->getHeaderLine('content-type');
-                    
-                    if (str_contains($contentType, 'application/json')) {
-                        $decoded = json_decode($body, true);
-                        if (is_array($decoded)) {
-                            $_POST = $decoded;
-                        }
-                    } elseif (str_contains($contentType, 'application/x-www-form-urlencoded')) {
-                        parse_str($body, $_POST);
+        // Since PivotPHP Core 1.1.0 Request implements ServerRequestInterface,
+        // we can create a proper PSR-7 ServerRequest and return it directly
+
+        $uri = $reactRequest->getUri();
+        $serverParams = $this->prepareServerParams($reactRequest);
+
+        // Create PSR-7 ServerRequest using PivotPHP's factory
+        $request = $this->requestFactory->createServerRequest(
+            $reactRequest->getMethod(),
+            $uri,
+            $serverParams
+        );
+
+        // Copy protocol version
+        $request = $request->withProtocolVersion($reactRequest->getProtocolVersion());
+
+        // Copy request target
+        $request = $request->withRequestTarget($reactRequest->getRequestTarget());
+
+        // Copy headers
+        foreach ($reactRequest->getHeaders() as $name => $values) {
+            $request = $request->withHeader($name, $values);
+        }
+
+        // Copy body
+        $body = $this->convertBody($reactRequest->getBody());
+        $request = $request->withBody($body);
+
+        // Copy query params
+        $request = $request->withQueryParams($reactRequest->getQueryParams());
+
+        // Copy parsed body
+        $parsedBody = $reactRequest->getParsedBody();
+        if ($parsedBody !== null) {
+            $request = $request->withParsedBody($parsedBody);
+        } else {
+            // If no parsed body, try to parse based on content-type
+            $contentType = $reactRequest->getHeaderLine('Content-Type');
+
+            // Ensure stream is at the beginning before reading
+            $bodyStream = $reactRequest->getBody();
+            $bodyStream->rewind();
+            $bodyContents = (string) $bodyStream;
+
+            if ($bodyContents !== '') {
+                if (stripos($contentType, 'application/json') !== false) {
+                    $decoded = json_decode($bodyContents, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $request = $request->withParsedBody($decoded);
                     }
+                } elseif (stripos($contentType, 'application/x-www-form-urlencoded') !== false) {
+                    parse_str($bodyContents, $formData);
+                    $request = $request->withParsedBody($formData);
                 }
             }
-            
-            // Create PivotPHP Request (will read from globals)
-            $pivotRequest = new \PivotPHP\Core\Http\Request($method, $path, $path);
-            
-            return $pivotRequest;
-            
-        } finally {
-            // Restore original global state
-            $_SERVER = $originalServer;
-            $_GET = $originalGet;
-            $_POST = $originalPost;
         }
+
+        // Copy cookie params
+        $request = $request->withCookieParams($reactRequest->getCookieParams());
+
+        // Copy uploaded files
+        $uploadedFiles = $reactRequest->getUploadedFiles();
+        if ($uploadedFiles !== []) {
+            $request = $request->withUploadedFiles($this->convertUploadedFiles($uploadedFiles));
+        }
+
+        // Copy attributes
+        foreach ($reactRequest->getAttributes() as $name => $value) {
+            $request = $request->withAttribute($name, $value);
+        }
+
+        return $request;
     }
 
     private function prepareServerParams(ServerRequestInterface $request): array
@@ -104,9 +109,9 @@ final class RequestBridge
             'REQUEST_METHOD' => $request->getMethod(),
             'REQUEST_URI' => $request->getRequestTarget(),
             'SERVER_PROTOCOL' => 'HTTP/' . $request->getProtocolVersion(),
-            'HTTP_HOST' => $uri->getHost() . ($uri->getPort() ? ':' . $uri->getPort() : ''),
+            'HTTP_HOST' => $uri->getHost() . ($uri->getPort() !== null ? ':' . $uri->getPort() : ''),
             'SERVER_NAME' => $uri->getHost(),
-            'SERVER_PORT' => $uri->getPort() ?: ($uri->getScheme() === 'https' ? 443 : 80),
+            'SERVER_PORT' => $uri->getPort() ?? ($uri->getScheme() === 'https' ? 443 : 80),
             'REQUEST_SCHEME' => $uri->getScheme(),
             'HTTPS' => $uri->getScheme() === 'https' ? 'on' : 'off',
             'QUERY_STRING' => $uri->getQuery(),

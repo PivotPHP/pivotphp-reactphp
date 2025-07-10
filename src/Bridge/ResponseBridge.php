@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PivotPHP\ReactPHP\Bridge;
 
-use PivotPHP\ReactPHP\Adapter\Psr7CompatibilityAdapter;
 use Psr\Http\Message\ResponseInterface;
+use PivotPHP\ReactPHP\Helpers\HeaderHelper;
 use React\Http\Message\Response as ReactResponse;
 use React\Stream\ReadableResourceStream;
 use React\Stream\ThroughStream;
@@ -14,21 +14,11 @@ final class ResponseBridge
 {
     public function convertToReact(ResponseInterface $psrResponse): ReactResponse
     {
-        // Use the adapter to ensure we get a proper React response
-        $reactResponse = Psr7CompatibilityAdapter::unwrapResponse($psrResponse);
-        
-        if ($reactResponse instanceof ReactResponse) {
-            return $reactResponse;
-        }
-        
-        // Fallback: create a new React response
-        $headers = [];
-        foreach ($psrResponse->getHeaders() as $name => $values) {
-            $headers[$name] = implode(', ', $values);
-        }
+        // Convert PSR-7 Response to ReactPHP Response
+        $headers = HeaderHelper::convertPsrToArray($psrResponse->getHeaders());
 
         $body = $psrResponse->getBody();
-        
+
         if ($body->isSeekable()) {
             $body->rewind();
         }
@@ -49,10 +39,7 @@ final class ResponseBridge
 
     public function convertToReactStream(ResponseInterface $psrResponse): ReactResponse
     {
-        $headers = [];
-        foreach ($psrResponse->getHeaders() as $name => $values) {
-            $headers[$name] = implode(', ', $values);
-        }
+        $headers = HeaderHelper::convertPsrToArray($psrResponse->getHeaders());
 
         $body = $psrResponse->getBody();
         $stream = new ThroughStream();
@@ -63,7 +50,7 @@ final class ResponseBridge
 
         if ($body->isReadable()) {
             $metaData = $body->getMetadata();
-            if (isset($metaData['stream']) && is_resource($metaData['stream'])) {
+            if (is_array($metaData) && isset($metaData['stream']) && is_resource($metaData['stream'])) {
                 $reactStream = new ReadableResourceStream($metaData['stream']);
                 $reactStream->pipe($stream);
             } else {
