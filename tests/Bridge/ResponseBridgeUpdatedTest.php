@@ -177,7 +177,7 @@ final class ResponseBridgeUpdatedTest extends TestCase
             $body instanceof \Psr\Http\Message\StreamInterface ||
             is_resource($body) ||
             method_exists($body, 'read'),
-            'Body should be a stream-like object, got: ' . get_class($body)
+            'Body should be a stream-like object, got: ' . (is_object($body) ? get_class($body) : gettype($body))
         );
     }
 
@@ -313,7 +313,7 @@ final class ResponseBridgeUpdatedTest extends TestCase
             $body instanceof \Psr\Http\Message\StreamInterface ||
             is_resource($body) ||
             method_exists($body, 'read'),
-            'Body should be a stream-like object, got: ' . get_class($body)
+            'Body should be a stream-like object, got: ' . (is_object($body) ? get_class($body) : gettype($body))
         );
     }
 }
