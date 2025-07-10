@@ -28,6 +28,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        // Configure output control for testing
+        $this->configureTestOutputControl();
+
         $this->loop = Loop::get();
         $this->requestFactory = new RequestFactory();
         $this->responseFactory = new ResponseFactory();
@@ -40,6 +43,9 @@ abstract class TestCase extends BaseTestCase
     protected function tearDown(): void
     {
         $this->loop->stop();
+
+        // Clean any captured output from tests
+        $this->cleanOutputBuffer();
 
         parent::tearDown();
     }
@@ -70,5 +76,64 @@ abstract class TestCase extends BaseTestCase
             $this->loop->stop();
         });
         $this->loop->run();
+    }
+
+    /**
+     * Configure output control for testing to prevent unexpected output
+     */
+    private function configureTestOutputControl(): void
+    {
+        // Define PHPUNIT_TESTSUITE constant if not already defined
+        // This helps PivotPHP Core detect test environment
+        if (!defined('PHPUNIT_TESTSUITE')) {
+            define('PHPUNIT_TESTSUITE', true);
+        }
+
+        // Start output buffering to capture any unexpected output
+        if (ob_get_level() === 0) {
+            ob_start();
+        }
+    }
+
+    /**
+     * Create a response instance configured for testing
+     */
+    protected function createTestResponse(): \PivotPHP\Core\Http\Response
+    {
+        $response = new \PivotPHP\Core\Http\Response();
+        
+        // Enable test mode to prevent automatic output
+        $response->setTestMode(true);
+        
+        // Disable auto-emit to prevent automatic response emission
+        $response->disableAutoEmit(true);
+        
+        return $response;
+    }
+
+    /**
+     * Clean output buffer to prevent test output warnings
+     */
+    private function cleanOutputBuffer(): void
+    {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+    }
+
+    /**
+     * Execute code while capturing and suppressing any output
+     */
+    protected function withoutOutput(callable $callback): mixed
+    {
+        ob_start();
+        try {
+            $result = $callback();
+        } finally {
+            // Discard any output produced
+            ob_end_clean();
+        }
+        
+        return $result;
     }
 }

@@ -7,8 +7,9 @@ parameters:
         - tests/Fixtures/*
     reportUnmatchedIgnoredErrors: false
     treatPhpDocTypesAsCertain: false
-    checkGenericClassInNonGenericObjectType: false
-    checkMissingIterableValueType: false
+    ignoreErrors:
+        - identifier: missingType.generics
+        - identifier: missingType.iterableValue
 includes:
     - vendor/phpstan/phpstan-phpunit/extension.neon
     - vendor/phpstan/phpstan-strict-rules/rules.neon

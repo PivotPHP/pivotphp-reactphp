@@ -26,11 +26,10 @@ final class ResponseBridgeTest extends TestCase
 
         $reactResponse = $this->bridge->convertToReact($psrResponse);
 
-        $this->assertInstanceOf(ReactResponse::class, $reactResponse);
-        $this->assertEquals(200, $reactResponse->getStatusCode());
-        $this->assertEquals('OK', $reactResponse->getReasonPhrase());
-        $this->assertEquals('text/plain', $reactResponse->getHeaderLine('Content-Type'));
-        $this->assertEquals('Hello, World!', (string) $reactResponse->getBody());
+        self::assertEquals(200, $reactResponse->getStatusCode());
+        self::assertEquals('OK', $reactResponse->getReasonPhrase());
+        self::assertEquals('text/plain', $reactResponse->getHeaderLine('Content-Type'));
+        self::assertEquals('Hello, World!', (string) $reactResponse->getBody());
     }
 
     public function testConvertResponseWithMultipleHeaders(): void
@@ -42,8 +41,8 @@ final class ResponseBridgeTest extends TestCase
 
         $reactResponse = $this->bridge->convertToReact($psrResponse);
 
-        $this->assertEquals('value1, value2', $reactResponse->getHeaderLine('X-Custom'));
-        $this->assertEquals('no-cache', $reactResponse->getHeaderLine('Cache-Control'));
+        self::assertEquals('value1, value2', $reactResponse->getHeaderLine('X-Custom'));
+        self::assertEquals('no-cache', $reactResponse->getHeaderLine('Cache-Control'));
     }
 
     public function testConvertEmptyResponse(): void
@@ -52,26 +51,27 @@ final class ResponseBridgeTest extends TestCase
 
         $reactResponse = $this->bridge->convertToReact($psrResponse);
 
-        $this->assertEquals(204, $reactResponse->getStatusCode());
-        $this->assertEquals('', (string) $reactResponse->getBody());
+        self::assertEquals(204, $reactResponse->getStatusCode());
+        self::assertEquals('', (string) $reactResponse->getBody());
     }
 
     public function testConvertJsonResponse(): void
     {
         $data = ['status' => 'success', 'data' => ['id' => 1, 'name' => 'Test']];
         $json = json_encode($data);
+        $jsonString = $json !== false ? $json : '{}';
 
         $psrResponse = $this->responseFactory->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
-            ->withBody($this->streamFactory->createStream($json));
+            ->withBody($this->streamFactory->createStream($jsonString));
 
         $reactResponse = $this->bridge->convertToReact($psrResponse);
 
-        $this->assertEquals('application/json', $reactResponse->getHeaderLine('Content-Type'));
-        $this->assertEquals($json, (string) $reactResponse->getBody());
+        self::assertEquals('application/json', $reactResponse->getHeaderLine('Content-Type'));
+        self::assertEquals($jsonString, (string) $reactResponse->getBody());
 
         $decoded = json_decode((string) $reactResponse->getBody(), true);
-        $this->assertEquals($data, $decoded);
+        self::assertEquals($data, $decoded);
     }
 
     public function testConvertResponseWithCustomStatusAndProtocol(): void
@@ -81,9 +81,9 @@ final class ResponseBridgeTest extends TestCase
 
         $reactResponse = $this->bridge->convertToReact($psrResponse);
 
-        $this->assertEquals(418, $reactResponse->getStatusCode());
-        $this->assertEquals("I'm a teapot", $reactResponse->getReasonPhrase());
-        $this->assertEquals('2.0', $reactResponse->getProtocolVersion());
+        self::assertEquals(418, $reactResponse->getStatusCode());
+        self::assertEquals("I'm a teapot", $reactResponse->getReasonPhrase());
+        self::assertEquals('2.0', $reactResponse->getProtocolVersion());
     }
 
     public function testConvertLargeResponse(): void
@@ -96,7 +96,7 @@ final class ResponseBridgeTest extends TestCase
 
         $reactResponse = $this->bridge->convertToReact($psrResponse);
 
-        $this->assertEquals($largeContent, (string) $reactResponse->getBody());
-        $this->assertEquals(strlen($largeContent), $reactResponse->getHeaderLine('Content-Length'));
+        self::assertEquals($largeContent, (string) $reactResponse->getBody());
+        self::assertEquals(strlen($largeContent), $reactResponse->getHeaderLine('Content-Length'));
     }
 }

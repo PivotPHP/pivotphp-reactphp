@@ -84,7 +84,7 @@ final class ReactServerCompat
     /**
      * Handle request with compatibility workaround
      */
-    private function handleRequestCompat($reactRequest): Promise
+    private function handleRequestCompat(\React\Http\Message\ServerRequest $reactRequest): Promise
     {
         return new Promise(function ($resolve, $reject) use ($reactRequest) {
             try {
@@ -104,34 +104,33 @@ final class ReactServerCompat
 
                 // Set headers
                 foreach ($headers as $name => $values) {
-                    $pivotRequest->headers->set($name, is_array($values) ? implode(', ', $values) : $values);
+                    $headerValue = is_array($values) ? implode(', ', $values) : $values;
+                    $pivotRequest = $pivotRequest->withHeader($name, $headerValue);
                 }
 
                 // Parse query params
-                if ($query) {
+                if ($query !== '') {
                     parse_str($query, $queryParams);
-                    foreach ($queryParams as $key => $value) {
-                        $pivotRequest->query->$key = $value;
-                    }
+                    $pivotRequest = $pivotRequest->withQueryParams($queryParams);
                 }
 
                 // Parse body
-                if ($body) {
-                    $contentType = $pivotRequest->headers->get('content-type', '');
+                if ($body !== '') {
+                    $contentType = $pivotRequest->getHeaderLine('Content-Type');
 
                     if (str_contains($contentType, 'application/json')) {
                         $parsedBody = json_decode($body, true);
                         if (is_array($parsedBody)) {
-                            foreach ($parsedBody as $key => $value) {
-                                $pivotRequest->body->$key = $value;
-                            }
+                            $pivotRequest = $pivotRequest->withParsedBody($parsedBody);
                         }
                     } elseif (str_contains($contentType, 'application/x-www-form-urlencoded')) {
                         parse_str($body, $parsedBody);
-                        foreach ($parsedBody as $key => $value) {
-                            $pivotRequest->body->$key = $value;
-                        }
+                        $pivotRequest = $pivotRequest->withParsedBody($parsedBody);
                     }
+
+                    // Set body stream
+                    $stream = new \PivotPHP\Core\Http\Psr7\Stream($body);
+                    $pivotRequest = $pivotRequest->withBody($stream);
                 }
 
                 // Create PivotPHP Response
@@ -140,7 +139,7 @@ final class ReactServerCompat
                 // Find and execute route
                 $route = \PivotPHP\Core\Routing\Router::identify($method, $path);
 
-                if ($route) {
+                if ($route !== null) {
                     // Execute route handler
                     $handler = $route['handler'];
 
@@ -153,16 +152,17 @@ final class ReactServerCompat
                     $reactResponse = new \React\Http\Message\Response(
                         200,
                         ['Content-Type' => 'application/json'],
-                        $output
+                        $output !== false ? $output : ''
                     );
 
                     $resolve($reactResponse);
                 } else {
                     // 404 Not Found
+                    $notFoundBody = json_encode(['error' => 'Not Found']);
                     $reactResponse = new \React\Http\Message\Response(
                         404,
                         ['Content-Type' => 'application/json'],
-                        json_encode(['error' => 'Not Found'])
+                        $notFoundBody !== false ? $notFoundBody : '{"error":"Not Found"}'
                     );
 
                     $resolve($reactResponse);
@@ -173,15 +173,21 @@ final class ReactServerCompat
                     'trace' => $e->getTraceAsString(),
                 ]);
 
+                $errorBody = json_encode(['error' => 'Internal Server Error']);
                 $reactResponse = new \React\Http\Message\Response(
                     500,
                     ['Content-Type' => 'application/json'],
-                    json_encode(['error' => 'Internal Server Error'])
+                    $errorBody !== false ? $errorBody : '{"error":"Internal Server Error"}'
                 );
 
                 $resolve($reactResponse);
             }
         });
+    }
+
+    public function getApplication(): Application
+    {
+        return $this->application;
     }
 
     public function stop(): void
@@ -193,7 +199,7 @@ final class ReactServerCompat
         $this->logger->info('Stopping ReactPHP server...');
         $this->emitEvent('server.stopping');
 
-        if ($this->socket) {
+        if ($this->socket !== null) {
             $this->socket->close();
         }
 

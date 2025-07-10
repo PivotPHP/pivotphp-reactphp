@@ -22,7 +22,7 @@ use Throwable;
 final class ReactServer
 {
     private HttpServer $httpServer;
-    private SocketServer $socketServer;
+    private ?SocketServer $socketServer = null;
     private LoopInterface $loop;
     private LoggerInterface $logger;
     private RequestBridge $requestBridge;
@@ -64,7 +64,11 @@ final class ReactServer
     {
         $this->logger->info('Stopping ReactPHP server...');
 
-        $this->socketServer->close();
+        if ($this->socketServer !== null) {
+            $this->socketServer->close();
+            $this->socketServer = null;
+        }
+        
         $this->loop->stop();
 
         $this->logger->info('ReactPHP server stopped');
@@ -110,8 +114,48 @@ final class ReactServer
                 $psrRequest = $this->requestBridge->convertFromReact($request);
 
                 // Handle request through PivotPHP Application
-                // The application now returns a PSR-7 ResponseInterface
-                $psrResponse = $this->application->handle($psrRequest);
+                // Convert PSR-7 to PivotPHP Request if needed
+                if (!($psrRequest instanceof \PivotPHP\Core\Http\Request)) {
+                    // For PivotPHP Request to work correctly, we need to use its static factory method
+                    // or manipulate global state. Let's use a direct approach by setting up the globals
+                    // that PivotPHP expects and then creating the request.
+                    
+                    // Backup current global state
+                    $originalPost = $_POST;
+                    $originalServer = $_SERVER;
+                    
+                    try {
+                        // Setup $_SERVER variables that PivotPHP expects
+                        $_SERVER['REQUEST_METHOD'] = $psrRequest->getMethod();
+                        $_SERVER['REQUEST_URI'] = (string) $psrRequest->getUri();
+                        $_SERVER['HTTP_HOST'] = $psrRequest->getUri()->getHost();
+                        
+                        // Set content type
+                        if ($psrRequest->hasHeader('Content-Type')) {
+                            $_SERVER['CONTENT_TYPE'] = $psrRequest->getHeaderLine('Content-Type');
+                        }
+                        
+                        // For POST/PUT/PATCH requests, setup $_POST with parsed body data
+                        if (in_array($psrRequest->getMethod(), ['POST', 'PUT', 'PATCH'])) {
+                            $parsedBody = $psrRequest->getParsedBody();
+                            if (is_array($parsedBody)) {
+                                $_POST = $parsedBody;
+                            }
+                        }
+                        
+                        // Create PivotPHP Request using its static factory method
+                        $pivotRequest = \PivotPHP\Core\Http\Request::createFromGlobals();
+                        
+                    } finally {
+                        // Always restore original state
+                        $_POST = $originalPost;
+                        $_SERVER = $originalServer;
+                    }
+
+                    $psrResponse = $this->application->handle($pivotRequest);
+                } else {
+                    $psrResponse = $this->application->handle($psrRequest);
+                }
 
                 // Convert PSR-7 Response to ReactPHP Response
                 // Use streaming if enabled and response indicates streaming
@@ -151,7 +195,11 @@ final class ReactServer
         if ($this->application->has('error.handler')) {
             try {
                 $errorHandler = $this->application->make('error.handler');
-                $errorResponse = $errorHandler->handle($e);
+                if (is_object($errorHandler) && method_exists($errorHandler, 'handle')) {
+                    $errorResponse = $errorHandler->handle($e);
+                } else {
+                    throw new \RuntimeException('Invalid error handler');
+                }
                 $reactResponse = $this->responseBridge->convertToReact($errorResponse);
                 $resolve($reactResponse);
                 return;
@@ -163,14 +211,15 @@ final class ReactServer
         }
 
         // Fallback error response
+        $errorBody = json_encode([
+            'error' => 'Internal Server Error',
+            'message' => $this->config['debug'] ? $e->getMessage() : 'An error occurred',
+            'error_id' => uniqid('err_', true),
+        ]);
         $resolve(new ReactResponse(
             500,
             ['Content-Type' => 'application/json'],
-            json_encode([
-                'error' => 'Internal Server Error',
-                'message' => $this->config['debug'] ? $e->getMessage() : 'An error occurred',
-                'error_id' => uniqid('err_', true),
-            ])
+            $errorBody !== false ? $errorBody : '{"error":"Internal Server Error"}'
         ));
     }
 
@@ -179,12 +228,12 @@ final class ReactServer
         // Check if response should be streamed based on headers or other indicators
         $contentType = $response->getHeaderLine('Content-Type');
         $transferEncoding = $response->getHeaderLine('Transfer-Encoding');
-        
+
         // Stream if chunked transfer encoding is used
         if ($transferEncoding === 'chunked') {
             return true;
         }
-        
+
         // Stream for certain content types
         $streamableTypes = [
             'text/event-stream',
@@ -192,13 +241,13 @@ final class ReactServer
             'video/',
             'audio/',
         ];
-        
+
         foreach ($streamableTypes as $type) {
             if (str_starts_with($contentType, $type)) {
                 return true;
             }
         }
-        
+
         // Check for custom streaming header
         return $response->hasHeader('X-Stream-Response');
     }
