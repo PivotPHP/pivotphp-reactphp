@@ -122,6 +122,47 @@ public function testRequestBridgeConvertsHeaders(): void
 }
 ```
 
+### Testing Callback Verification
+
+```php
+public function testCallbackInvocation(): void
+{
+    $expectedArgs = ['arg1', 'arg2'];
+    $actualCallback = function ($arg1, $arg2) {
+        return $arg1 . $arg2;
+    };
+    
+    [$wrapper, $verifier] = AssertionHelper::createCallbackVerifier($this, $actualCallback, $expectedArgs);
+    
+    // Use the wrapper in your test
+    $result = $wrapper('arg1', 'arg2');
+    
+    // Verify the callback was called with correct arguments
+    $verifier();
+    
+    $this->assertEquals('arg1arg2', $result);
+}
+```
+
+### Testing Requests Without Headers
+
+```php
+public function testMissingHostHeader(): void
+{
+    // Remove automatically added Host header
+    $request = (new ServerRequest(
+        'GET',
+        new Uri('http://example.com/test'),
+        []
+    ))->withoutHeader('Host');
+    
+    $response = $this->middleware->process($request, $handler);
+    
+    // Assert specific status code, not ranges
+    $this->assertEquals(400, $response->getStatusCode());
+}
+```
+
 ### Performance Test Example
 
 ```php
@@ -143,6 +184,9 @@ public function testHighLoad(): void
 3. **Assertions**: Use specific assertions for clarity
 4. **Mocking**: Mock external dependencies
 5. **Performance**: Skip heavy tests by default
+6. **Output Buffer Management**: TestCase automatically handles output buffer isolation
+7. **Callback Testing**: Use AssertionHelper::createCallbackVerifier() for proper callback verification
+8. **Error Assertions**: Assert specific status codes rather than ranges for clear expectations
 
 ## Test Configuration
 

@@ -21,10 +21,10 @@ use React\Http\Message\Uri;
 final class RequestIsolationTest extends TestCase
 {
     /**
-     * Backup superglobals that might be modified during testing
-     * @var array<string>
+     * Custom backup of superglobals for isolation testing
+     * @var array<string, mixed>
      */
-    protected $backupGlobals = ['_GET', '_POST', '_COOKIE', '_SESSION', '_FILES', '_SERVER'];
+    private array $globalBackup = [];
 
     private RequestIsolation $isolation;
 
@@ -43,8 +43,6 @@ final class RequestIsolationTest extends TestCase
         $this->restoreGlobals();
         parent::tearDown();
     }
-
-    private array $globalBackup = [];
 
     /**
      * Safely backup superglobals for testing RequestIsolation functionality.
