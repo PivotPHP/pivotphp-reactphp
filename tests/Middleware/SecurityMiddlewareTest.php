@@ -138,21 +138,18 @@ final class SecurityMiddlewareTest extends TestCase
 
     public function testValidatesHostHeader(): void
     {
-        // Missing host header
-        $request = new ServerRequest(
+        // Missing host header - use withoutHeader to explicitly remove it
+        $request = (new ServerRequest(
             'GET',
             new Uri('http://example.com/test'),
             [] // No headers
-        );
+        ))->withoutHeader('Host');
 
         $handler = $this->createMock(RequestHandlerInterface::class);
         $response = $this->middleware->process($request, $handler);
 
-        // Check what we actually get - could be 400 or 500 depending on error handling
-        self::assertTrue(
-            $response->getStatusCode() === 400 || $response->getStatusCode() === 500,
-            'Expected 400 or 500, got ' . $response->getStatusCode()
-        );
+        // Host header validation always returns 400 status code
+        self::assertEquals(400, $response->getStatusCode());
 
         // Invalid host header
         $request2 = new ServerRequest(
