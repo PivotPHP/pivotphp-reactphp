@@ -66,7 +66,7 @@ final class ReactServerTest extends TestCase
     public function testServerStopBeforeStart(): void
     {
         // Test that stopping a server that never started doesn't cause issues
-        self::expectNotToPerformAssertions();
+        $this->expectNotToPerformAssertions();
 
         $this->server->stop();
         // If no exception is thrown, the test passes

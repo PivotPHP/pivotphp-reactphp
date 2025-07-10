@@ -298,7 +298,7 @@ final class ReactServerIntegrationTest extends TestCase
     public function testServerStartAndStop(): void
     {
         // Test starting server (without actually binding to port)
-        self::expectNotToPerformAssertions();
+        $this->expectNotToPerformAssertions();
 
         // Server should be able to stop gracefully
         $this->server->stop();

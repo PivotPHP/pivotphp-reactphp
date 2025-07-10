@@ -7,6 +7,7 @@ namespace PivotPHP\ReactPHP\Tests\Helpers;
 use React\Http\Browser;
 use React\Http\Message\Response;
 use React\Promise\PromiseInterface;
+use PivotPHP\ReactPHP\Tests\Mocks\MockBrowser;
 
 /**
  * Helper class for handling HTTP responses in tests
@@ -77,10 +78,14 @@ final class ResponseHelper
     /**
      * Create a mock Browser with predictable responses
      */
-    public static function createMockBrowser(array $responses = []): Browser
+    public static function createMockBrowser(array $responses = []): MockBrowser
     {
-        // This would need to be implemented based on your testing needs
-        // For now, we'll return a simple mock structure
-        throw new \RuntimeException('Mock browser creation not implemented yet');
+        $mockBrowser = new MockBrowser();
+
+        foreach ($responses as $url => $response) {
+            $mockBrowser->setResponse($url, $response);
+        }
+
+        return $mockBrowser;
     }
 }

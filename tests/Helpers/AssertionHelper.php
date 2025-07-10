@@ -56,9 +56,16 @@ final class AssertionHelper
     }
 
     /**
-     * Assert that a callback method was called with expected parameters
+     * Create a callback wrapper that tracks calls and validates arguments
+     *
+     * Usage:
+     * [$wrappedCallback, $verifier] = AssertionHelper::createCallbackVerifier(
+     *     $this, $originalCallback, ['expected', 'args']
+     * );
+     * // Use $wrappedCallback in place of $originalCallback
+     * $verifier(); // Call this to verify the callback was called with expected args
      */
-    public static function assertMethodCalledWith(TestCase $testCase, callable $callback, array $expectedArgs): void
+    public static function createCallbackVerifier(TestCase $testCase, callable $callback, array $expectedArgs): array
     {
         $called = false;
         $actualArgs = [];
@@ -69,9 +76,12 @@ final class AssertionHelper
             return $callback(...$args);
         };
 
-        // Call the wrapper - this would need adaptation based on usage
-        $testCase::assertTrue($called, 'Expected method to be called');
-        $testCase::assertEquals($expectedArgs, $actualArgs, 'Method called with wrong arguments');
+        $verifier = function () use (&$called, &$actualArgs, $expectedArgs, $testCase) {
+            $testCase::assertTrue($called, 'Expected method to be called');
+            $testCase::assertEquals($expectedArgs, $actualArgs, 'Method called with wrong arguments');
+        };
+
+        return [$wrapper, $verifier];
     }
 
     /**
