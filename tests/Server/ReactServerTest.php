@@ -30,10 +30,10 @@ final class ReactServerTest extends TestCase
     public function testServerStartsAndStops(): void
     {
         self::assertSame($this->loop, $this->server->getLoop());
-        
+
         // Test that server can be created without throwing exceptions
         $serverAddress = '127.0.0.1:0'; // Port 0 = let system choose available port
-        
+
         try {
             // This should work without blocking
             self::assertInstanceOf(ReactServer::class, $this->server);
@@ -51,7 +51,7 @@ final class ReactServerTest extends TestCase
             'streaming' => false,
             'max_concurrent_requests' => 50,
         ];
-        
+
         $configuredServer = new ReactServer($this->app, $this->loop, new NullLogger(), $config);
         self::assertInstanceOf(ReactServer::class, $configuredServer);
         self::assertSame($this->loop, $configuredServer->getLoop());
@@ -62,7 +62,7 @@ final class ReactServerTest extends TestCase
         // Test that server accepts different logger types
         $logger = new NullLogger();
         $serverWithLogger = new ReactServer($this->app, $this->loop, $logger);
-        
+
         self::assertInstanceOf(ReactServer::class, $serverWithLogger);
         self::assertSame($this->loop, $serverWithLogger->getLoop());
     }

@@ -84,7 +84,9 @@ abstract class TestCase extends BaseTestCase
     private function configureTestOutputControl(): void
     {
         // Define PHPUNIT_TESTSUITE constant if not already defined
-        // This helps PivotPHP Core detect test environment
+        // IMPORTANT: PivotPHP Core specifically checks for this exact constant name
+        // in src/Http/Response.php to control output buffering during tests
+        // DO NOT change this constant name - it's required by PivotPHP Core
         if (!defined('PHPUNIT_TESTSUITE')) {
             define('PHPUNIT_TESTSUITE', true);
         }
@@ -101,13 +103,13 @@ abstract class TestCase extends BaseTestCase
     protected function createTestResponse(): \PivotPHP\Core\Http\Response
     {
         $response = new \PivotPHP\Core\Http\Response();
-        
+
         // Enable test mode to prevent automatic output
         $response->setTestMode(true);
-        
+
         // Disable auto-emit to prevent automatic response emission
         $response->disableAutoEmit(true);
-        
+
         return $response;
     }
 
@@ -133,7 +135,7 @@ abstract class TestCase extends BaseTestCase
             // Discard any output produced
             ob_end_clean();
         }
-        
+
         return $result;
     }
 }

@@ -77,13 +77,47 @@ final class MemoryGuard
 
     /**
      * Register a cache to monitor
+     *
+     * @param string $name Cache identifier
+     * @param CacheInterface|mixed $cache Cache object (CacheInterface preferred, others will be wrapped)
+     * @param int|null $maxSize Maximum size in bytes before cleaning
+     * @throws \InvalidArgumentException If cache type is unsupported
      */
     public function registerCache(string $name, mixed $cache, ?int $maxSize = null): void
     {
+        // If already a CacheInterface, use directly
+        if ($cache instanceof CacheInterface) {
+            $this->trackedCaches[$name] = [
+                'object' => $cache,
+                'max_size' => $maxSize ?? $this->config['cache_size_limits']['default'],
+                'type' => 'interface',
+            ];
+            return;
+        }
+
+        // Detect type and validate if we can wrap it
+        $type = $this->detectCacheType($cache);
+
+        if ($type === 'array') {
+            throw new \InvalidArgumentException(
+                'Plain arrays cannot be monitored effectively as they are passed by value. ' .
+                'Use ArrayObject, implement CacheInterface, or pass arrays by reference through a wrapper.'
+            );
+        }
+
+        if ($type === 'unknown') {
+            throw new \InvalidArgumentException(
+                'Unsupported cache type. Cache must implement CacheInterface or be ArrayObject/SplObjectStorage.'
+            );
+        }
+
+        // Wrap compatible cache types
+        $wrappedCache = new CacheWrapper($cache, $type);
+
         $this->trackedCaches[$name] = [
-            'object' => $cache,
+            'object' => $wrappedCache,
             'max_size' => $maxSize ?? $this->config['cache_size_limits']['default'],
-            'type' => $this->detectCacheType($cache),
+            'type' => 'wrapped',
         ];
     }
 
@@ -142,16 +176,33 @@ final class MemoryGuard
             $cache = $info['object'];
             $maxSize = $info['max_size'];
 
-            $currentSize = $this->getCacheSize($cache, $info['type']);
+            // Use CacheInterface methods for both wrapped and native implementations
+            if ($cache instanceof CacheInterface) {
+                $currentSize = $cache->getMemorySize();
 
-            if ($currentSize > $maxSize) {
-                $this->logger->warning('Cache size exceeded', [
-                    'cache' => $name,
-                    'current_size' => $this->formatBytes($currentSize),
-                    'max_size' => $this->formatBytes($maxSize),
-                ]);
+                if ($currentSize > $maxSize) {
+                    $this->logger->warning('Cache size exceeded', [
+                        'cache' => $name,
+                        'current_size' => $this->formatBytes($currentSize),
+                        'max_size' => $this->formatBytes($maxSize),
+                        'stats' => $cache->getStats(),
+                    ]);
 
-                $this->cleanCache($cache, $info['type'], $maxSize);
+                    $cache->clean($maxSize);
+                }
+            } else {
+                // Fallback for legacy cache handling (should not happen with new API)
+                $currentSize = $this->getCacheSize($cache, $info['type']);
+
+                if ($currentSize > $maxSize) {
+                    $this->logger->warning('Cache size exceeded (legacy)', [
+                        'cache' => $name,
+                        'current_size' => $this->formatBytes($currentSize),
+                        'max_size' => $this->formatBytes($maxSize),
+                    ]);
+
+                    $this->cleanCache($cache, $info['type'], $maxSize);
+                }
             }
         }
     }
@@ -275,7 +326,12 @@ final class MemoryGuard
 
         // Clean all caches by 50%
         foreach ($this->trackedCaches as $name => $info) {
-            $this->cleanCache($info['object'], $info['type'], $info['max_size'] / 2);
+            $cache = $info['object'];
+            if ($cache instanceof CacheInterface) {
+                $cache->clean((int) ($info['max_size'] / 2));
+            } else {
+                $this->cleanCache($cache, $info['type'], (int) ($info['max_size'] / 2));
+            }
         }
     }
 
@@ -301,8 +357,11 @@ final class MemoryGuard
 
         // Clear all caches
         foreach ($this->trackedCaches as $name => $info) {
-            if (is_object($info['object']) && method_exists($info['object'], 'clear')) {
-                $info['object']->clear();
+            $cache = $info['object'];
+            if ($cache instanceof CacheInterface) {
+                $cache->clear();
+            } elseif (is_object($cache) && method_exists($cache, 'clear')) {
+                $cache->clear();
             }
         }
 

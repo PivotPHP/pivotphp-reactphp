@@ -9,8 +9,23 @@ use PivotPHP\ReactPHP\Tests\TestCase;
 use React\Http\Message\ServerRequest;
 use React\Http\Message\Uri;
 
+/**
+ * Test class for RequestIsolation functionality.
+ *
+ * Note: This test necessarily manipulates superglobals to verify isolation behavior.
+ * We use multiple safety measures to ensure test isolation:
+ * 1. PHPUnit's built-in backup of superglobals
+ * 2. Custom backup/restore with defensive programming
+ * 3. Proper cleanup in tearDown()
+ */
 final class RequestIsolationTest extends TestCase
 {
+    /**
+     * Backup superglobals that might be modified during testing
+     * @var array<string>
+     */
+    protected $backupGlobals = ['_GET', '_POST', '_COOKIE', '_SESSION', '_FILES', '_SERVER'];
+
     private RequestIsolation $isolation;
 
     protected function setUp(): void
@@ -31,32 +46,53 @@ final class RequestIsolationTest extends TestCase
 
     private array $globalBackup = [];
 
+    /**
+     * Safely backup superglobals for testing RequestIsolation functionality.
+     * Note: This test specifically requires superglobal manipulation to test isolation behavior.
+     */
     private function backupGlobals(): void
     {
-        // Initialize superglobals if not set
+        // Use a defensive approach - only backup what exists
+        $this->globalBackup = [
+            'SERVER' => $_SERVER ?? [],
+            'GET' => $_GET ?? [],
+            'POST' => $_POST ?? [],
+            'COOKIE' => $_COOKIE ?? [],
+            'SESSION' => $_SESSION ?? [],
+            'FILES' => $_FILES ?? [],
+        ];
+
+        // Ensure $_SESSION is properly initialized for testing
         if (!isset($_SESSION)) {
             $_SESSION = [];
         }
-        // $_FILES, $_COOKIE, $_GET, $_POST are always set in PHP
-
-        $this->globalBackup = [
-            'SERVER' => $_SERVER,
-            'GET' => $_GET,
-            'POST' => $_POST,
-            'COOKIE' => $_COOKIE,
-            'SESSION' => $_SESSION,
-            'FILES' => $_FILES,
-        ];
     }
 
+    /**
+     * Restore superglobals to their original state.
+     * This ensures test isolation and prevents side effects.
+     */
     private function restoreGlobals(): void
     {
-        $_SERVER = $this->globalBackup['SERVER'];
-        $_GET = $this->globalBackup['GET'];
-        $_POST = $this->globalBackup['POST'];
-        $_COOKIE = $this->globalBackup['COOKIE'];
-        $_SESSION = $this->globalBackup['SESSION'];
-        $_FILES = $this->globalBackup['FILES'];
+        // Restore only if we have backup data
+        if (isset($this->globalBackup['SERVER'])) {
+            $_SERVER = $this->globalBackup['SERVER'];
+        }
+        if (isset($this->globalBackup['GET'])) {
+            $_GET = $this->globalBackup['GET'];
+        }
+        if (isset($this->globalBackup['POST'])) {
+            $_POST = $this->globalBackup['POST'];
+        }
+        if (isset($this->globalBackup['COOKIE'])) {
+            $_COOKIE = $this->globalBackup['COOKIE'];
+        }
+        if (isset($this->globalBackup['SESSION'])) {
+            $_SESSION = $this->globalBackup['SESSION'];
+        }
+        if (isset($this->globalBackup['FILES'])) {
+            $_FILES = $this->globalBackup['FILES'];
+        }
     }
 
     public function testCreateContextGeneratesUniqueId(): void

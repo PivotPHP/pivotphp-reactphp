@@ -57,27 +57,52 @@ final class ResponseBridgeUpdatedTest extends TestCase
             ->header('X-Custom-Header', 'value1')
             ->header('X-Another-Header', 'value2');
 
-        // PivotPHP uses withAddedHeader from PSR-7
+        // Test current PivotPHP Core behavior with withAddedHeader
+        // NOTE: PivotPHP Core currently has a bug where withAddedHeader doesn't append correctly
+        // This test documents the current behavior until the Core issue is fixed
         $pivotResponse = $pivotResponse->withAddedHeader('X-Custom-Header', 'value3');
-
-        // Debug: Check what headers we actually have
-        $headers = $pivotResponse->getHeaders();
-        $customHeaderValues = $headers['X-Custom-Header'] ?? [];
 
         $reactResponse = $this->bridge->convertToReact($pivotResponse);
 
-        // Test what we actually get, not what we expect
-        $actualHeaderValue = $reactResponse->getHeaderLine('X-Custom-Header');
-
-        // Check if we have multiple values or just one
-        // @phpstan-ignore-next-line Header values are always array from PSR-7
-        if (count($customHeaderValues) > 1) {
-            self::assertEquals('value1, value3', $actualHeaderValue);
-        } else {
-            // If withAddedHeader didn't work, just test that we have at least one value
-            self::assertNotEmpty($actualHeaderValue);
-        }
+        // Current behavior: withAddedHeader doesn't work correctly in PivotPHP Core
+        // TODO: Update this test when PivotPHP Core fixes withAddedHeader implementation
+        self::assertEquals('value1', $reactResponse->getHeaderLine('X-Custom-Header'));
         self::assertEquals('value2', $reactResponse->getHeaderLine('X-Another-Header'));
+    }
+
+    public function testConvertToReactWithReplacedHeader(): void
+    {
+        $pivotResponse = (new PivotResponse())
+            ->text('Test')
+            ->header('X-Custom-Header', 'value1');
+
+        // Use withHeader to replace the existing header value
+        $pivotResponse = $pivotResponse->withHeader('X-Custom-Header', 'new-value');
+
+        $reactResponse = $this->bridge->convertToReact($pivotResponse);
+
+        // withHeader should replace the existing value
+        self::assertEquals('new-value', $reactResponse->getHeaderLine('X-Custom-Header'));
+    }
+
+    public function testConvertToReactWithManualMultipleHeaderValues(): void
+    {
+        // Test proper multiple header handling using PSR-7 withHeader and array values
+        $pivotResponse = (new PivotResponse())
+            ->text('Test')
+            ->withHeader('X-Custom-Header', ['value1', 'value2'])
+            ->withHeader('Cache-Control', ['no-cache', 'must-revalidate']);
+
+        $reactResponse = $this->bridge->convertToReact($pivotResponse);
+
+        // Multiple header values should be comma-separated when accessed via getHeaderLine()
+        self::assertEquals('value1, value2', $reactResponse->getHeaderLine('X-Custom-Header'));
+        self::assertEquals('no-cache, must-revalidate', $reactResponse->getHeaderLine('Cache-Control'));
+
+        // ReactPHP Response stores headers as comma-separated strings, not arrays
+        // This is correct behavior - our HeaderHelper converts PSR-7 arrays to ReactPHP format
+        self::assertEquals(['value1, value2'], $reactResponse->getHeader('X-Custom-Header'));
+        self::assertEquals(['no-cache, must-revalidate'], $reactResponse->getHeader('Cache-Control'));
     }
 
     public function testConvertToReactWithStatusAndReasonPhrase(): void
@@ -145,10 +170,10 @@ final class ResponseBridgeUpdatedTest extends TestCase
 
         // The body should be a stream or stream-like object
         $body = $reactResponse->getBody();
-        
+
         // Accept any stream-like object, not just ThroughStream
         self::assertTrue(
-            $body instanceof ThroughStream || 
+            $body instanceof ThroughStream ||
             $body instanceof \Psr\Http\Message\StreamInterface ||
             is_resource($body) ||
             method_exists($body, 'read'),
@@ -183,14 +208,14 @@ final class ResponseBridgeUpdatedTest extends TestCase
         $reactResponse = $this->bridge->convertToReact($pivotResponse);
 
         $cookies = $reactResponse->getHeader('Set-Cookie');
-        
+
         // Accept either 1 or 2 cookies - depends on PivotPHP implementation
         self::assertGreaterThanOrEqual(1, count($cookies));
-        
+
         // Ensure both cookie values appear somewhere in the headers
         $allCookieContent = implode(' ', $cookies);
         self::assertStringContainsString('session=abc123', $allCookieContent);
-        
+
         // For now, just check that at least one cookie was set
         // The withAddedHeader behavior might differ between PivotPHP versions
         self::assertNotEmpty($cookies[0]);
@@ -281,10 +306,10 @@ final class ResponseBridgeUpdatedTest extends TestCase
 
         // The stream should be created and contain the content
         $body = $reactResponse->getBody();
-        
+
         // Accept any stream-like object, not just ThroughStream
         self::assertTrue(
-            $body instanceof ThroughStream || 
+            $body instanceof ThroughStream ||
             $body instanceof \Psr\Http\Message\StreamInterface ||
             is_resource($body) ||
             method_exists($body, 'read'),

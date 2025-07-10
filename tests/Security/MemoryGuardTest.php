@@ -90,8 +90,8 @@ final class MemoryGuardTest extends TestCase
 
     public function testCacheSizeDetection(): void
     {
-        // Test with array cache
-        $arrayCache = [];
+        // Test with ArrayObject cache (proper implementation)
+        $arrayCache = new \ArrayObject();
         for ($i = 0; $i < 100; $i++) {
             $arrayCache[] = str_repeat('x', 100); // 100 bytes each
         }
@@ -124,14 +124,15 @@ final class MemoryGuardTest extends TestCase
         self::assertGreaterThan(0, $stats['current_memory']);
     }
 
-    public function testArrayCacheType(): void
+    public function testArrayCacheTypeValidation(): void
     {
+        // This test now validates that plain arrays are properly rejected
         $cache = ['item1', 'item2', 'item3'];
-        $this->memoryGuard->registerCache('array', $cache);
 
-        // Internal type detection should recognize this as array
-        $stats = $this->memoryGuard->getStats();
-        self::assertEquals(1, $stats['tracked_caches']);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Plain arrays cannot be monitored effectively');
+
+        $this->memoryGuard->registerCache('array', $cache);
     }
 
     public function testArrayObjectCacheType(): void
@@ -183,8 +184,8 @@ final class MemoryGuardTest extends TestCase
 
         $guard->startMonitoring();
 
-        // Create some data to trigger memory usage
-        $data = str_repeat('x', 1024 * 1024); // 1MB
+        // Create modest data to trigger memory thresholds (test has 512 byte warning threshold)
+        $data = str_repeat('x', 2048); // 2KB - enough to trigger warning
 
         // Run event loop briefly to trigger check
         Loop::get()->addTimer(0.2, function () {
@@ -203,15 +204,35 @@ final class MemoryGuardTest extends TestCase
     public function testMultipleCaches(): void
     {
         $cache1 = new \ArrayObject();
-        $cache2 = ['data' => 'test'];
         $cache3 = new \SplObjectStorage();
 
         $this->memoryGuard->registerCache('cache1', $cache1);
-        $this->memoryGuard->registerCache('cache2', $cache2);
         $this->memoryGuard->registerCache('cache3', $cache3);
 
         $stats = $this->memoryGuard->getStats();
-        self::assertEquals(3, $stats['tracked_caches']);
+        self::assertEquals(2, $stats['tracked_caches']);
+    }
+
+    public function testArrayCacheRejected(): void
+    {
+        $arrayCache = ['data' => 'test'];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Plain arrays cannot be monitored effectively');
+
+        $this->memoryGuard->registerCache('bad_cache', $arrayCache);
+    }
+
+    public function testCacheInterfaceImplementation(): void
+    {
+        $cache = new \PivotPHP\ReactPHP\Security\ArrayCache();
+        $cache->set('test', 'value');
+
+        // Should not throw exception
+        $this->memoryGuard->registerCache('good_cache', $cache);
+
+        $stats = $this->memoryGuard->getStats();
+        self::assertEquals(1, $stats['tracked_caches']);
     }
 
     public function testMemoryLeakCallbackTriggered(): void

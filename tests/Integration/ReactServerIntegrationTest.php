@@ -77,10 +77,10 @@ final class ReactServerIntegrationTest extends TestCase
         $router::post('/api/data', function ($request, $response) {
             // Access the request body (PivotPHP automatically parses JSON)
             $body = $request->body;
-            
+
             // Convert stdClass to array for response
             $bodyArray = json_decode(json_encode($body), true);
-            
+
             return (new Response())->json([
                 'received' => $bodyArray,
                 'processed' => true,
@@ -148,13 +148,13 @@ final class ReactServerIntegrationTest extends TestCase
 
         self::assertNotNull($response);
         assert($response instanceof \React\Http\Message\Response);
-        
+
         // With corrected PivotPHP route syntax, this should work now
         self::assertEquals(200, $response->getStatusCode());
-        
+
         $body = JsonHelper::decode((string) $response->getBody());
         self::assertNotNull($body, 'Route should return valid JSON response');
-        
+
         self::assertEquals('123', $body['user_id']);
         self::assertArrayHasKey('timestamp', $body);
     }
@@ -186,9 +186,9 @@ final class ReactServerIntegrationTest extends TestCase
         self::assertNotNull($response);
         assert($response instanceof \React\Http\Message\Response);
         self::assertEquals(200, $response->getStatusCode());
-        
+
         $body = JsonHelper::decode((string) $response->getBody());
-        
+
         self::assertNotNull($body, 'Response body should contain valid JSON');
         self::assertArrayHasKey('received', $body, 'Response should contain received data');
         self::assertArrayHasKey('processed', $body, 'Response should contain processed flag');

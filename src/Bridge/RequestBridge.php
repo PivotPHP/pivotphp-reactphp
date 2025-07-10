@@ -66,7 +66,7 @@ final class RequestBridge
         } else {
             // If no parsed body, try to parse based on content-type
             $contentType = $reactRequest->getHeaderLine('Content-Type');
-            
+
             // Ensure stream is at the beginning before reading
             $bodyStream = $reactRequest->getBody();
             $bodyStream->rewind();

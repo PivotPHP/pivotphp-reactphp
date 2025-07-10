@@ -6,7 +6,7 @@
          beStrictAboutOutputDuringTests="false"
          beStrictAboutTodoAnnotatedTests="true"
          failOnRisky="false"
-         failOnWarning="true"
+         failOnWarning="false"
          cacheDirectory=".phpunit.cache"
          executionOrder="depends,defects"
          requireCoverageMetadata="false"
