@@ -117,7 +117,9 @@ final class RuntimeBlockingDetector
                 return !isset($frame['class']) || $frame['class'] !== self::class;
             });
 
-            $relevantFrame = reset($filteredTrace) !== false ? reset($filteredTrace) : ['file' => 'unknown', 'line' => 0, 'function' => 'unknown'];
+            $relevantFrame = reset($filteredTrace) !== false
+                ? reset($filteredTrace)
+                : ['file' => 'unknown', 'line' => 0, 'function' => 'unknown'];
 
             ($this->callback)([
                 'duration' => $duration,

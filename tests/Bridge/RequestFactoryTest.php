@@ -173,7 +173,9 @@ class RequestFactoryTest extends TestCase
 
     public function testCreateRequestWithComplexData(): void
     {
-        $body = $this->streamFactory->createStream('{"user":{"name":"Alice","settings":{"theme":"dark","notifications":true}}}');
+        $body = $this->streamFactory->createStream(
+            '{"user":{"name":"Alice","settings":{"theme":"dark","notifications":true}}}'
+        );
         $psrRequest = $this->serverRequestFactory->createServerRequest('PUT', '/profile')
             ->withHeader('Content-Type', 'application/json')
             ->withHeader('X-Request-ID', 'abc123')
