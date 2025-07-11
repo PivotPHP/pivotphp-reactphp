@@ -341,9 +341,9 @@ CMD ["php", "artisan", "serve:reactphp", "--host=0.0.0.0", "--port=8080"]
 - 🐛 [**Issues**](https://github.com/PivotPHP/pivotphp-reactphp/issues) - Bug reports
 
 ### **Suporte**
-- 📧 **Email**: support@pivotphp.com
-- 📞 **Business**: business@pivotphp.com
-- 🌐 **Website**: [pivotphp.com](https://pivotphp.com)
+- 📧 **GitHub Issues**: https://github.com/PivotPHP/pivotphp-reactphp/issues
+- 📞 **Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
+- 🌐 **Documentation**: https://pivotphp.github.io/website/docs/
 
 ---
 

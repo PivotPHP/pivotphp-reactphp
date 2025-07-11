@@ -431,6 +431,6 @@ Se encontrar problemas na migração:
 1. **📖 Documentação**: [Technical Overview](TECHNICAL-OVERVIEW.md)
 2. **🐛 Issues**: [GitHub Issues](https://github.com/PivotPHP/pivotphp-reactphp/issues)
 3. **💬 Community**: [Discord](https://discord.gg/DMtxsP7z)
-4. **📧 Direct**: team@pivotphp.com
+4. **📧 Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
 
 **🎉 Bem-vindo à v0.1.0 - A primeira release estável do PivotPHP ReactPHP!**

@@ -176,14 +176,14 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 ## 📞 Contatos
 
 ### **Suporte Técnico**
-- 📧 **Email**: support@pivotphp.com
+- 📧 **GitHub Issues**: https://github.com/PivotPHP/pivotphp-reactphp/issues
 - 💬 **Discord**: [PivotPHP Community](https://discord.gg/DMtxsP7z)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/PivotPHP/pivotphp-reactphp/issues)
 
 ### **Business Development**
-- 📧 **Email**: business@pivotphp.com
+- 📧 **Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
 - 📞 **Phone**: +55 (11) 99999-9999
-- 🌐 **Website**: [pivotphp.com](https://pivotphp.com)
+- 🌐 **Documentation**: https://pivotphp.github.io/website/docs/
 
 ---
 

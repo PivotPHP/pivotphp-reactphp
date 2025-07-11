@@ -293,7 +293,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 - **GitHub Issues**: Report bugs and request features
-- **Email**: team@pivotphp.com
+- **Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
 - **Documentation**: Check the docs/ directory
 
 ## 🙏 Acknowledgments
