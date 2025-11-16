@@ -132,7 +132,7 @@ graph TD
     D --> E[SecurityMiddleware]
     E --> F[Application Router]
     F --> G[Route Handler]
-    G --> H[PivotPHP Response] 
+    G --> H[PivotPHP Response]
     H --> I[ResponseBridge]
     I --> J[ReactPHP Response]
     J --> K[State Cleanup]
@@ -172,13 +172,13 @@ composer cs:check
 public function testPostRouteWorksCorrectly(): void
 {
     $postData = ['name' => 'Test', 'value' => 42];
-    
+
     $response = $this->server->handleRequest(
         $this->createPostRequest('/api/data', $postData)
     );
-    
+
     self::assertEquals(200, $response->getStatusCode());
-    
+
     $body = JsonHelper::decode((string) $response->getBody());
     self::assertEquals($postData, $body['received']);
     self::assertTrue($body['processed']);
@@ -207,7 +207,7 @@ public function testPostRouteWorksCorrectly(): void
 
 ### **Recursos de Segurança v0.1.0**
 - ✅ **Request Isolation** - Contextos completamente isolados
-- ✅ **Memory Guard** - Monitoramento contra vazamentos  
+- ✅ **Memory Guard** - Monitoramento contra vazamentos
 - ✅ **Blocking Detection** - Detecção de código bloqueante
 - ✅ **Global State Management** - Backup/restore automático
 - ✅ **Security Headers** - Proteção automática
@@ -298,7 +298,7 @@ upstream pivotphp_backend {
 server {
     listen 80;
     server_name api.example.com;
-    
+
     location / {
         proxy_pass http://pivotphp_backend;
         proxy_set_header Host $host;
@@ -336,7 +336,6 @@ CMD ["php", "artisan", "serve:reactphp", "--host=0.0.0.0", "--port=8080"]
 - 🐙 [**GitHub**](https://github.com/PivotPHP/pivotphp-reactphp) - Código fonte
 
 ### **Comunidade**
-- 💬 [**Discord**](https://discord.gg/DMtxsP7z) - Chat da comunidade
 - 📖 [**Documentação**](https://pivotphp.github.io/docs) - Docs oficiais
 - 🐛 [**Issues**](https://github.com/PivotPHP/pivotphp-reactphp/issues) - Bug reports
 

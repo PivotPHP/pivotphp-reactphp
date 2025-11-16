@@ -150,13 +150,13 @@ use PivotPHP\ReactPHP\Helpers\RequestHelper;
 $app->post('/api/secure', function($request, $response) {
     // Detectar IP real (com proxies)
     $clientIp = RequestHelper::getClientIp($request, $trustProxies = true);
-    
+
     // Identificador único do cliente
     $clientId = RequestHelper::getClientIdentifier($request);
-    
+
     // Usar em logs ou rate limiting
     error_log("Request from client: {$clientId} (IP: {$clientIp})");
-    
+
     return $response->json(['client_id' => $clientId]);
 });
 ```
@@ -174,7 +174,7 @@ return [
         'streaming' => env('REACTPHP_STREAMING', false),
         'max_concurrent_requests' => env('REACTPHP_MAX_CONCURRENT', 100),
     ],
-    
+
     // ✨ NOVO - Configurações de segurança (opcionais)
     'security' => [
         'enable_request_isolation' => true,  // Isolamento entre requisições
@@ -183,7 +183,7 @@ return [
         'memory_limit_warning' => 134217728,  // 128MB
         'memory_limit_critical' => 268435456, // 256MB
     ],
-    
+
     // ✨ NOVO - Monitoramento (opcional)
     'monitoring' => [
         'enable_health_checks' => true,
@@ -206,7 +206,7 @@ return [
 REACTPHP_ENABLE_MONITORING=true
 REACTPHP_HEALTH_CHECKS=true
 
-# Segurança 
+# Segurança
 REACTPHP_REQUEST_ISOLATION=true
 REACTPHP_MEMORY_GUARD=true
 REACTPHP_MEMORY_WARNING=134217728
@@ -305,13 +305,13 @@ use PivotPHP\ReactPHP\Helpers\HeaderHelper;
 // Headers de segurança automáticos
 $app->use(function($request, $response, $next) {
     $result = $next($request, $response);
-    
+
     // Adicionar headers de segurança
     $securityHeaders = HeaderHelper::getSecurityHeaders($isProduction = true);
     foreach ($securityHeaders as $name => $value) {
         $result = $result->withHeader($name, $value);
     }
-    
+
     return $result;
 });
 ```
@@ -329,7 +329,7 @@ $app->use(function($request, $response, $next) {
     // Log detalhado de requisições
     $clientIp = RequestHelper::getClientIp($request, true);
     $clientId = RequestHelper::getClientIdentifier($request);
-    
+
     error_log(sprintf(
         'Request: %s %s from %s (%s)',
         $request->getMethod(),
@@ -337,7 +337,7 @@ $app->use(function($request, $response, $next) {
         $clientIp,
         $clientId
     ));
-    
+
     return $next($request, $response);
 });
 ```
@@ -409,7 +409,7 @@ $app->use(function($request, $response, $next) {
     $start = microtime(true);
     $result = $next($request, $response);
     $duration = microtime(true) - $start;
-    
+
     error_log(sprintf(
         'v0.1.0 - %s %s - %dms - %dMB',
         $request->getMethod(),
@@ -417,7 +417,7 @@ $app->use(function($request, $response, $next) {
         round($duration * 1000),
         round(memory_get_usage(true) / 1024 / 1024)
     ));
-    
+
     return $result;
 });
 ```
@@ -430,7 +430,6 @@ Se encontrar problemas na migração:
 
 1. **📖 Documentação**: [Technical Overview](TECHNICAL-OVERVIEW.md)
 2. **🐛 Issues**: [GitHub Issues](https://github.com/PivotPHP/pivotphp-reactphp/issues)
-3. **💬 Community**: [Discord](https://discord.gg/DMtxsP7z)
-4. **📧 Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
+3. **📧 Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
 
 **🎉 Bem-vindo à v0.1.0 - A primeira release estável do PivotPHP ReactPHP!**

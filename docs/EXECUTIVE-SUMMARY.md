@@ -54,7 +54,7 @@ PHPStan Errors → ✅ 388 erros reduzidos para 0
 HeaderHelper    → Processamento centralizado de headers HTTP
 ResponseHelper  → Respostas de erro padronizadas
 JsonHelper      → Operações JSON type-safe
-GlobalStateHelper → Backup/restore seguro de superglobals  
+GlobalStateHelper → Backup/restore seguro de superglobals
 RequestHelper   → Identificação e análise de clientes
 ```
 
@@ -102,7 +102,7 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 ### **Standards Compliance**
 - ✅ **PSR-7** HTTP Message Interface
 - ✅ **PSR-12** Extended Coding Style
-- ✅ **PSR-15** HTTP Server Request Handlers  
+- ✅ **PSR-15** HTTP Server Request Handlers
 - ✅ **ReactPHP** Event-driven I/O compatibility
 - ✅ **PivotPHP Core 1.1.0** Native integration
 
@@ -177,7 +177,6 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 
 ### **Suporte Técnico**
 - 📧 **GitHub Issues**: https://github.com/PivotPHP/pivotphp-reactphp/issues
-- 💬 **Discord**: [PivotPHP Community](https://discord.gg/DMtxsP7z)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/PivotPHP/pivotphp-reactphp/issues)
 
 ### **Business Development**
@@ -192,7 +191,7 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 O **PivotPHP ReactPHP v0.1.0** representa um marco significativo no ecossistema PivotPHP, oferecendo:
 
 - ✅ **Estabilidade empresarial** com 100% dos testes passando
-- ✅ **Performance excepcional** com runtime contínuo 
+- ✅ **Performance excepcional** com runtime contínuo
 - ✅ **Segurança robusta** com isolamento completo
 - ✅ **Qualidade de código** com PHPStan Level 9
 - ✅ **Documentação completa** para adoção rápida

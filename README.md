@@ -14,11 +14,11 @@ Uma extensão de runtime contínuo de **alta performance** para PivotPHP usando 
 
 ### 🏃‍♂️ **Performance Extrema**
 - **Runtime Contínuo**: Aplicação permanece em memória entre requisições
-- **Zero Bootstrap**: Elimina overhead de inicialização por requisição  
+- **Zero Bootstrap**: Elimina overhead de inicialização por requisição
 - **Event-Loop Otimizado**: Processamento concorrente não-bloqueante
 - **Persistent Connections**: Conexões de banco e cache mantidas vivas
 
-### 🛡️ **Produção Ready** 
+### 🛡️ **Produção Ready**
 - **100% Testado** - 113 testes, 319 assertions passando
 - **PHPStan Level 9** - Análise estática máxima
 - **PSR-12 Compliant** - Padrão de codificação rigoroso
@@ -65,7 +65,7 @@ $app->get('/', function($request, $response) {
 // POST com parsing automático de JSON
 $app->post('/api/data', function($request, $response) {
     $data = $request->body; // JSON automaticamente parseado
-    
+
     return $response->json([
         'received' => $data,
         'processed' => true,
@@ -76,7 +76,7 @@ $app->post('/api/data', function($request, $response) {
 // Rota com parâmetros (sintaxe PivotPHP)
 $app->get('/user/:id', function($request, $response) {
     $id = $request->param('id');
-    
+
     return $response->json([
         'user_id' => $id,
         'profile' => "Profile for user {$id}"
@@ -161,19 +161,19 @@ $app->post('/api/secure', function($request, $response) {
     // Identificação segura do cliente
     $clientIp = RequestHelper::getClientIp($request, $trustProxies = true);
     $clientId = RequestHelper::getClientIdentifier($request);
-    
+
     // Parsing JSON type-safe
     $data = JsonHelper::decode($request->body);
-    
+
     if (!$data) {
         // Response de erro padronizada
         return ResponseHelper::createErrorResponse(
-            400, 
+            400,
             'Invalid JSON data',
             ['client_ip' => $clientIp]
         );
     }
-    
+
     return $response->json([
         'processed' => true,
         'client_id' => $clientId,
@@ -194,7 +194,7 @@ graph TD
     D --> E[SecurityMiddleware]
     E --> F[Application Router]
     F --> G[Route Handler]
-    G --> H[PivotPHP Response] 
+    G --> H[PivotPHP Response]
     H --> I[ResponseBridge]
     I --> J[ReactPHP Response]
     J --> K[State Cleanup]
@@ -345,7 +345,7 @@ upstream pivotphp_backend {
 server {
     listen 80;
     server_name api.example.com;
-    
+
     location / {
         proxy_pass http://pivotphp_backend;
         proxy_set_header Host $host;
@@ -356,7 +356,7 @@ server {
 }
 ```
 
-### **Docker** 
+### **Docker**
 
 ```dockerfile
 FROM php:8.2-cli-alpine
@@ -399,15 +399,15 @@ $app->use(SecurityMiddleware::class);
 // Validar entrada
 $app->post('/api/user', function($request, $response) {
     $data = $request->body;
-    
+
     // Validação básica
     if (!isset($data['email']) || !filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
         return ResponseHelper::createErrorResponse(400, 'Invalid email');
     }
-    
+
     // Sanitização
     $email = filter_var($data['email'], FILTER_SANITIZE_EMAIL);
-    
+
     return $response->json(['email' => $email]);
 });
 ```
@@ -447,7 +447,6 @@ Este projeto está licenciado sob a [Licença MIT](LICENSE).
 - 📦 [**Packagist**](https://packagist.org/packages/pivotphp/reactphp)
 - 🐙 [**GitHub**](https://github.com/PivotPHP/pivotphp-reactphp)
 - 🏠 [**PivotPHP Core**](https://github.com/PivotPHP/pivotphp-core)
-- 💬 [**Discord Community**](https://discord.gg/DMtxsP7z)
 - 📖 [**Documentação**](https://pivotphp.github.io/docs)
 
 ## 🙏 Agradecimentos
