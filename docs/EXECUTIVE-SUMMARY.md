@@ -7,8 +7,8 @@ O **PivotPHP ReactPHP v0.1.0** marca a primeira release estável de uma extensã
 ## 📈 Métricas de Qualidade
 
 ### **Estabilidade de Código**
-- ✅ **113 testes** automatizados executados
-- ✅ **319 assertions** validadas com 100% de sucesso
+- ✅ **180 testes** automatizados (contagem atual)
+- ✅ **444 assertions** (contagem atual; consulte o CI para status de aprovação)
 - ✅ **PHPStan Level 9** - máximo rigor de análise estática
 - ✅ **PSR-12 compliance** - padrão moderno de codificação
 - ✅ **0 bugs críticos** ou falhas de segurança identificadas
@@ -70,7 +70,7 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 
 | Métrica | v0.0.2 | v0.1.0 | Melhoria |
 |---------|--------|--------|----------|
-| **Testes Passando** | ~85% | 100% (113/113) | +15% |
+| **Testes Passando** | ~85% | 180 testes (contagem atual) | +15% |
 | **POST Routes** | ❌ Status 500 | ✅ Funcionais | +100% |
 | **PHPStan Errors** | 388 | 0 | -100% |
 | **Code Duplication** | ~95 linhas | 0 | -100% |
@@ -115,25 +115,36 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 
 ## 📈 Roadmap Estratégico
 
-### **Versão 0.2.0 (Q2 2025)**
+> **Este roadmap não foi cumprido como planejado**: as únicas tags reais deste
+> repositório são `0.0.1` e `0.1.0` (confirmado via `git tag`) — `0.2.0`, `0.3.0`
+> e `1.0.0` abaixo nunca foram lançadas, apesar das datas-alvo (Q2–Q4 2025) já
+> terem passado. Documentação de roadmap não deveria estar misturada com
+> documentação de estado atual (ver regra do workspace) — mantido aqui só como
+> registro histórico da intenção original, não como plano vigente.
+
+### **Versão 0.2.0 (planejada para Q2 2025, não lançada)**
 - WebSocket support nativo
 - HTTP/2 e HTTP/3 compatibility
 - Clustering multi-core automático
 - Advanced caching layer
 
-### **Versão 0.3.0 (Q3 2025)**
+### **Versão 0.3.0 (planejada para Q3 2025, não lançada)**
 - Kubernetes native deployment
 - Advanced monitoring dashboard
 - Auto-scaling capabilities
 - GraphQL integration
 
-### **Versão 1.0.0 (Q4 2025)**
+### **Versão 1.0.0 (planejada para Q4 2025, não lançada)**
 - Production-hardened release
 - Enterprise support features
 - Advanced security controls
 - Certified cloud deployments
 
 ## 💰 ROI Estimado
+
+> **Números especulativos, sem fonte ou metodologia documentada** — não foram
+> validados nesta correção e não deveriam ser tratados como medições reais.
+> Apresentados aqui como estavam; trate como ilustrativos, não como dado.
 
 ### **Infraestrutura**
 - **-50% servidores** necessários (runtime contínuo)
@@ -181,7 +192,6 @@ BlockingCodeDetector → Detecção de código potencialmente bloqueante
 
 ### **Business Development**
 - 📧 **Discussions**: https://github.com/PivotPHP/pivotphp-reactphp/discussions
-- 📞 **Phone**: +55 (11) 99999-9999
 - 🌐 **Documentation**: https://pivotphp.github.io/website/docs/
 
 ---

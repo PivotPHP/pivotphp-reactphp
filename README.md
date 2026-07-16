@@ -19,7 +19,7 @@ Uma extensão de runtime contínuo de **alta performance** para PivotPHP usando 
 - **Persistent Connections**: Conexões de banco e cache mantidas vivas
 
 ### 🛡️ **Produção Ready**
-- **100% Testado** - 113 testes, 319 assertions passando
+- **Testado** - 180 testes automatizados (contagem atual; consulte o CI para status de aprovação)
 - **PHPStan Level 9** - Análise estática máxima
 - **PSR-12 Compliant** - Padrão de codificação rigoroso
 - **Sistema de Segurança** - Isolamento completo entre requisições
@@ -35,6 +35,12 @@ Uma extensão de runtime contínuo de **alta performance** para PivotPHP usando 
 ```bash
 composer require pivotphp/reactphp:^0.1.0
 ```
+
+O repositório também inclui `composer-compat.json`, a definição de um pacote alternativo
+(`pivotphp/reactphp-compat`) que trava `psr/http-message` em `^1.0` para quem precisa de
+compatibilidade estrita com PSR-7 v1.x — não é instalado por padrão nem publicado junto
+com `composer.json`; use-o manualmente (`composer install --working-dir=... -f composer-compat.json`
+ou copiando as constraints) se seu projeto exigir especificamente essa faixa.
 
 ## 🚀 Início Rápido
 
@@ -89,9 +95,29 @@ echo "📡 Acesse: http://localhost:8080\n";
 
 ### **Iniciar o Servidor**
 
+Este pacote não inclui um `bin/console` pronto — `ServeCommand` é um comando real do
+Symfony Console (`extends Symfony\Component\Console\Command\Command`), mas você
+precisa criar o entrypoint no seu próprio projeto:
+
+```php
+#!/usr/bin/env php
+<?php
+// bin/console
+require __DIR__ . '/../vendor/autoload.php';
+
+use Symfony\Component\Console\Application as ConsoleApplication;
+use PivotPHP\ReactPHP\Commands\ServeCommand;
+
+$console = new ConsoleApplication();
+$console->add(new ServeCommand($container)); // $container: seu PSR-11 container
+$console->run();
+```
+
 ```bash
-# Via comando Artisan (recomendado)
-php artisan serve:reactphp --host=0.0.0.0 --port=8080
+chmod +x bin/console
+
+# Via comando bin/console
+php bin/console serve:reactphp --host=0.0.0.0 --port=8080
 
 # Ou diretamente
 php examples/server.php
@@ -135,7 +161,7 @@ $app->use(function($request, $response, $next) {
 use PivotPHP\ReactPHP\Monitoring\HealthMonitor;
 
 $app->get('/health', function($request, $response) {
-    $monitor = new HealthMonitor();
+    $monitor = new HealthMonitor($loop, $logger); // LoopInterface, LoggerInterface obrigatorios
     return $response->json($monitor->getHealthStatus());
 });
 
@@ -234,35 +260,43 @@ composer test:performance
 
 ### **Arquivo de Configuração** (`config/reactphp.php`)
 
+O arquivo real só tem as chaves `server`, `middleware`, `loop`, `performance` — não
+existem chaves `security`/`monitoring` neste pacote:
+
 ```php
 return [
     'server' => [
         'debug' => env('APP_DEBUG', false),
         'streaming' => env('REACTPHP_STREAMING', false),
-        'max_concurrent_requests' => env('REACTPHP_MAX_CONCURRENT', 100),
-        'request_body_size_limit' => env('REACTPHP_BODY_LIMIT', 16777216), // 16MB
+        'max_concurrent_requests' => env('REACTPHP_MAX_CONCURRENT_REQUESTS', 100),
+        'request_body_size_limit' => env('REACTPHP_REQUEST_BODY_SIZE_LIMIT', 67108864), // 64MB
+        'request_body_buffer_size' => env('REACTPHP_REQUEST_BODY_BUFFER_SIZE', 8192),
     ],
-    'security' => [
-        'enable_request_isolation' => true,
-        'enable_memory_guard' => true,
-        'enable_blocking_detection' => true,
+    'middleware' => [
+        // ...
     ],
-    'monitoring' => [
-        'enable_health_checks' => true,
-        'metrics_retention_hours' => 24,
+    'loop' => [
+        'timer_interval' => env('REACTPHP_TIMER_INTERVAL', 0.001),
+        'future_tick_queue_limit' => env('REACTPHP_FUTURE_TICK_QUEUE_LIMIT', 1000),
+    ],
+    'performance' => [
+        'enable_profiling' => env('REACTPHP_ENABLE_PROFILING', false),
+        'profile_memory' => env('REACTPHP_PROFILE_MEMORY', false),
+        'gc_collect_cycles_interval' => env('REACTPHP_GC_INTERVAL', 1000),
     ],
 ];
 ```
 
 ### **Variáveis de Ambiente**
 
+`REACTPHP_HOST`/`REACTPHP_PORT` só são lidas de flags CLI do `ServeCommand`
+(`--host`/`--port`), nunca de env vars:
+
 ```bash
 # .env
-REACTPHP_HOST=0.0.0.0
-REACTPHP_PORT=8080
 REACTPHP_STREAMING=false
-REACTPHP_MAX_CONCURRENT=1000
-REACTPHP_BODY_LIMIT=16777216
+REACTPHP_MAX_CONCURRENT_REQUESTS=1000
+REACTPHP_REQUEST_BODY_SIZE_LIMIT=67108864
 APP_DEBUG=false
 ```
 
@@ -323,7 +357,7 @@ composer quality:check
 
 ```ini
 [program:pivotphp-reactphp]
-command=php /var/www/artisan serve:reactphp --host=0.0.0.0 --port=8080
+command=php /var/www/bin/console serve:reactphp --host=0.0.0.0 --port=8080
 directory=/var/www
 user=www-data
 autostart=true
@@ -376,7 +410,7 @@ RUN composer install --no-dev --optimize-autoloader
 EXPOSE 8080
 
 # Comando de inicialização
-CMD ["php", "artisan", "serve:reactphp", "--host=0.0.0.0", "--port=8080"]
+CMD ["php", "bin/console", "serve:reactphp", "--host=0.0.0.0", "--port=8080"]
 ```
 
 ## 🛡️ Segurança

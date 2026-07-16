@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2025-01-10
+## [0.1.0] - 2025-07-10
 
 ### 🎉 Primeira Release Estável
 
@@ -33,7 +33,7 @@ Esta é a primeira release estável da extensão, com arquitetura robusta, quali
 - Detecção automática de vazamentos de memória e recursos
 
 #### **Testes e Qualidade**
-- 113 testes automatizados com 319 assertions (100% passando)
+- 180 testes automatizados (contagem atual; consulte o CI para status de aprovação)
 - Helpers de teste especializados (AssertionHelper, MockHelper, OutputBufferHelper)
 - Testes de integração completos para cenários reais
 - Testes de segurança para todos os componentes de proteção
@@ -54,7 +54,12 @@ Esta é a primeira release estável da extensão, com arquitetura robusta, quali
 - Suporte completo a POST/PUT/PATCH com bodies JSON complexos
 
 #### **Integração PivotPHP Core 1.1.0**
-- Sintaxe de rotas corrigida para padrão PivotPHP (`:id` ao invés de `{id}`)
+- Sintaxe de rotas corrigida para padrão PivotPHP (`:id` ao invés de `{id}`) — **nota**:
+  `examples/server.php` deste pacote ainda usa `{name}` (`$router->get('/hello/{name}', ...)`),
+  contradizendo esta entrada. `:id` é a sintaxe documentada no `pivotphp-core`
+  (suporta inclusive constraints regex, `:id<\d+>`), então o exemplo provavelmente
+  está desatualizado — não corrigido aqui por ser um arquivo `.php`, fora do
+  escopo desta correção de documentação.
 - Integração com test mode do PivotPHP Core para controle de output
 - Uso adequado dos métodos de container (`getContainer()`, `make()`)
 - Compatibilidade total com sistema de hooks e eventos do Core
@@ -146,7 +151,7 @@ Esta é a primeira release estável da extensão, com arquitetura robusta, quali
 - Validação de edge cases e error conditions
 - Performance testing para cenários de carga
 
-## [0.0.2] - 2025-01-09
+## [0.0.2] - 2025-07-09
 
 ### Added
 - Full compatibility with PivotPHP Core 1.1.0
@@ -183,7 +188,7 @@ Esta é a primeira release estável da extensão, com arquitetura robusta, quali
 ### Dependencies
 - Updated minimum PivotPHP Core requirement to 1.1.0
 
-## [0.0.1] - 2025-01-09
+## [0.0.1] - 2025-07-09
 
 ### Added
 - Initial release of PivotPHP ReactPHP Extension

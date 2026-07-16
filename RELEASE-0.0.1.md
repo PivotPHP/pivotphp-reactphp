@@ -1,6 +1,6 @@
 # PivotPHP ReactPHP v0.0.1 Release Notes
 
-**Release Date:** December 2024  
+**Release Date:** July 9, 2025  
 **Version:** 0.0.1 (Initial Release)
 
 ## 🎉 Introduction
@@ -117,10 +117,10 @@ $server->listen('0.0.0.0:8080');
 ### Console Command
 ```bash
 # Start server with default settings
-php artisan serve:reactphp
+php bin/console serve:reactphp
 
 # Custom configuration
-php artisan serve:reactphp --host=127.0.0.1 --port=8000 --env=development
+php bin/console serve:reactphp --host=127.0.0.1 --port=8000 --env=development
 ```
 
 ### Async Operations
@@ -198,7 +198,7 @@ composer server:start
 Use a process manager like Supervisor:
 ```ini
 [program:pivotphp-reactphp]
-command=php /path/to/app/artisan serve:reactphp --port=8080
+command=php /path/to/app/bin/console serve:reactphp --port=8080
 autostart=true
 autorestart=true
 user=www-data

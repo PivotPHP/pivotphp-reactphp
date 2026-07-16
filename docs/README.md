@@ -7,7 +7,7 @@
 A **PivotPHP ReactPHP Extension** v0.1.0 é a primeira release estável de uma extensão de runtime contínuo para PivotPHP, oferecendo integração completa com ReactPHP's event-driven architecture para performance excepcional.
 
 ### ✨ **Principais Conquistas v0.1.0**
-- ✅ **100% dos testes passando** (113 testes, 319 assertions)
+- ✅ **180 testes automatizados (contagem atual; consulte o CI para status de aprovação)
 - ✅ **PHPStan Level 9** - Análise estática máxima
 - ✅ **PSR-12 Compliant** - Padrão de codificação rigoroso
 - ✅ **5 Helpers especializados** - Código reutilizável e otimizado
@@ -68,7 +68,7 @@ echo "🚀 Servidor iniciado em http://localhost:8080\n";
 
 ### **Executar**
 ```bash
-php artisan serve:reactphp --host=0.0.0.0 --port=8080
+php bin/console serve:reactphp --host=0.0.0.0 --port=8080
 ```
 
 ---
@@ -102,7 +102,7 @@ $app->use(\PivotPHP\ReactPHP\Middleware\SecurityMiddleware::class);
 use PivotPHP\ReactPHP\Monitoring\HealthMonitor;
 
 $app->get('/health', function($req, $res) {
-    $monitor = new HealthMonitor();
+    $monitor = new HealthMonitor($loop, $logger); // LoopInterface, LoggerInterface obrigatorios
     return $res->json($monitor->getHealthStatus());
 });
 ```
@@ -113,7 +113,7 @@ $app->get('/health', function($req, $res) {
 
 | Métrica | v0.0.2 | v0.1.0 | Melhoria |
 |---------|--------|--------|----------|
-| **Testes Passando** | ~85% | 100% (113/113) | +15% |
+| **Testes Passando** | ~85% | 180 testes (contagem atual) | +15% |
 | **POST Routes** | ❌ Status 500 | ✅ Funcionais | +100% |
 | **PHPStan Errors** | 388 | 0 | -100% |
 | **Code Duplication** | ~95 linhas | 0 | -100% |
@@ -151,7 +151,7 @@ graph TD
 
 ### **Executar Testes**
 ```bash
-# Todos os testes (113 testes, 319 assertions)
+# Todos os testes (180 testes, contagem atual)
 composer test
 
 # Com cobertura
@@ -214,16 +214,16 @@ public function testPostRouteWorksCorrectly(): void
 - ✅ **Input Validation** - Validação rigorosa
 
 ### **Configuração de Segurança**
+
+`config/reactphp.php` não tem uma chave `security` — `RequestIsolation`, `MemoryGuard`
+e `BlockingCodeDetector` são instanciados diretamente em código (ver
+[SECURITY-GUIDELINES.md](SECURITY-GUIDELINES.md)), não configurados via array:
+
 ```php
-// config/reactphp.php
-return [
-    'security' => [
-        'enable_request_isolation' => true,
-        'enable_memory_guard' => true,
-        'enable_blocking_detection' => false, // dev only
-        'memory_limit_warning' => 134217728,  // 128MB
-    ],
-];
+use PivotPHP\ReactPHP\Security\MemoryGuard;
+
+$guard = new MemoryGuard($loop); // LoopInterface obrigatório
+$guard->startMonitoring();
 ```
 
 ---
@@ -231,42 +231,44 @@ return [
 ## 🔧 Configuração Avançada
 
 ### **Configuração Completa**
+
+O arquivo real só tem as chaves `server`, `middleware`, `loop`, `performance` — não
+existem chaves `security`/`monitoring` neste pacote:
+
 ```php
 // config/reactphp.php
 return [
     'server' => [
         'debug' => env('APP_DEBUG', false),
         'streaming' => env('REACTPHP_STREAMING', false),
-        'max_concurrent_requests' => env('REACTPHP_MAX_CONCURRENT', 100),
-        'request_body_size_limit' => env('REACTPHP_BODY_LIMIT', 16777216),
+        'max_concurrent_requests' => env('REACTPHP_MAX_CONCURRENT_REQUESTS', 100),
+        'request_body_size_limit' => env('REACTPHP_REQUEST_BODY_SIZE_LIMIT', 67108864), // 64MB
+        'request_body_buffer_size' => env('REACTPHP_REQUEST_BODY_BUFFER_SIZE', 8192),
     ],
-    'security' => [
-        'enable_request_isolation' => true,
-        'enable_memory_guard' => true,
-        'enable_blocking_detection' => false,
+    'middleware' => [
+        // ...
     ],
-    'monitoring' => [
-        'enable_health_checks' => true,
-        'metrics_retention_hours' => 24,
-        'alert_thresholds' => [
-            'response_time_ms' => 1000,
-            'error_rate_percent' => 5,
-            'memory_usage_percent' => 80,
-        ],
+    'loop' => [
+        'timer_interval' => env('REACTPHP_TIMER_INTERVAL', 0.001),
+        'future_tick_queue_limit' => env('REACTPHP_FUTURE_TICK_QUEUE_LIMIT', 1000),
+    ],
+    'performance' => [
+        'enable_profiling' => env('REACTPHP_ENABLE_PROFILING', false),
+        'profile_memory' => env('REACTPHP_PROFILE_MEMORY', false),
+        'gc_collect_cycles_interval' => env('REACTPHP_GC_INTERVAL', 1000),
     ],
 ];
 ```
 
 ### **Variáveis de Ambiente**
+
+`REACTPHP_HOST`/`REACTPHP_PORT` só são lidas de flags CLI (`--host`/`--port`), nunca de env:
+
 ```bash
 # .env
-REACTPHP_HOST=0.0.0.0
-REACTPHP_PORT=8080
 REACTPHP_STREAMING=false
-REACTPHP_MAX_CONCURRENT=1000
-REACTPHP_BODY_LIMIT=16777216
-REACTPHP_ENABLE_MONITORING=true
-REACTPHP_REQUEST_ISOLATION=true
+REACTPHP_MAX_CONCURRENT_REQUESTS=1000
+REACTPHP_REQUEST_BODY_SIZE_LIMIT=67108864
 ```
 
 ---
@@ -276,7 +278,7 @@ REACTPHP_REQUEST_ISOLATION=true
 ### **Supervisor**
 ```ini
 [program:pivotphp-reactphp]
-command=php /var/www/artisan serve:reactphp --host=0.0.0.0 --port=8080
+command=php /var/www/bin/console serve:reactphp --host=0.0.0.0 --port=8080
 directory=/var/www
 user=www-data
 autostart=true
@@ -323,7 +325,7 @@ RUN composer install --no-dev --optimize-autoloader
 
 EXPOSE 8080
 
-CMD ["php", "artisan", "serve:reactphp", "--host=0.0.0.0", "--port=8080"]
+CMD ["php", "bin/console", "serve:reactphp", "--host=0.0.0.0", "--port=8080"]
 ```
 
 ---
@@ -407,4 +409,4 @@ A **PivotPHP ReactPHP Extension v0.1.0** representa a primeira release estável 
 
 ---
 
-*Feito com ❤️ pela **PivotPHP Team** | v0.1.0 - Janeiro 2025*
+*Feito com ❤️ pela **PivotPHP Team** | v0.1.0 - Julho 2025*

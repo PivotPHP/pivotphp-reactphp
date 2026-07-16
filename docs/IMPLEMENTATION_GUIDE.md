@@ -4,6 +4,17 @@
 
 This guide documents the exact steps, challenges, and solutions discovered during the actual development and integration of ReactPHP with PivotPHP Core.
 
+> **Nota sobre `switch-psr7-version.php`**: as seções abaixo tratam esse script
+> como a solução definitiva para o conflito de PSR-7 entre `pivotphp/core` e
+> ReactPHP. Isso descreve uma versão anterior de `pivotphp/core` — a versão atual
+> tem suporte real e simultâneo a `psr/http-message` `^1.1` e `^2.0` na mesma
+> base de código, sem precisar trocar de versão manualmente (ver o CHANGELOG do
+> `pivotphp-core` para a correção de compatibilidade PSR-7 2.0). Se você
+> encontrar o erro de `getProtocolVersion()` descrito abaixo numa instalação
+> atual, confira primeiro se está usando uma versão desatualizada do
+> `pivotphp/core` antes de rodar o script. O restante deste guia não foi
+> revisado linha a linha nesta correção.
+
 ## Table of Contents
 
 1. [Prerequisites & Setup](#prerequisites--setup)

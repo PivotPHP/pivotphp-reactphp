@@ -18,7 +18,6 @@
 ### **Estrutura de Diretórios**
 ```
 src/
-├── Adapter/           # Adaptadores PSR-7 (deprecated na v0.1.0)
 ├── Bridge/            # Conversores Request/Response
 ├── Commands/          # Comandos console Symfony
 ├── Helpers/           # ⭐ NOVO: Sistema de helpers especializados
@@ -345,44 +344,34 @@ class RequestHelper
 ## 🔒 Sistema de Segurança
 
 ### **SecurityMiddleware** (`src/Middleware/SecurityMiddleware.php`)
-Middleware principal de segurança:
+Middleware PSR-15 (não Express-style `handle($req, $res, $next)`). Só depende de
+`RequestIsolation` diretamente — **não** integra `MemoryGuard` nem
+`BlockingCodeDetector` (esses dois são independentes, você os usa separadamente,
+ver seções abaixo). Fluxo real, simplificado:
 
 ```php
-class SecurityMiddleware
+final class SecurityMiddleware implements MiddlewareInterface
 {
-    private RequestIsolationInterface $isolation;
-    private MemoryGuard $memoryGuard;
-    private RuntimeBlockingDetector $blockingDetector;
-    
-    public function handle(
-        ServerRequestInterface $request, 
-        ResponseInterface $response, 
-        callable $next
-    ) {
-        // Criar contexto isolado para a requisição
+    public function __construct(
+        private RequestIsolationInterface $isolation,
+        private array $config = [],
+        private ?LoggerInterface $logger = null,
+    ) {}
+
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
+    {
+        // 1. Checks de segurança pré-requisição
+        // 2. Cria contexto isolado (se enable_isolation), anexa como atributo request_context_id
         $contextId = $this->isolation->createContext($request);
-        
-        try {
-            // Monitorar memória antes da requisição
-            $this->memoryGuard->startMonitoring();
-            
-            // Detectar código bloqueante
-            $this->blockingDetector->startDetection();
-            
-            // Processar requisição
-            $result = $next($request, $response);
-            
-            // Verificar integridade após processamento
-            $this->isolation->checkContextLeaks($contextId);
-            
-            return $result;
-            
-        } finally {
-            // Sempre limpar contexto
-            $this->isolation->destroyContext($contextId);
-            $this->memoryGuard->stopMonitoring();
-            $this->blockingDetector->stopDetection();
-        }
+        $request = $request->withAttribute('request_context_id', $contextId);
+
+        // 3. Rate limiting (se habilitado em $config)
+        // 4. Processa a requisição com timeout
+        $response = $handler->handle($request);
+
+        // 5. Adiciona security headers na resposta
+        return ResponseHelper::addSecurityHeaders($response, $this->isProduction());
+        // SecurityException e outras exceções viram respostas de erro no catch (não mostrado)
     }
 }
 ```
@@ -474,36 +463,31 @@ class MemoryGuard
 ```
 
 ### **BlockingCodeDetector** (`src/Security/BlockingCodeDetector.php`)
-Detecção de código bloqueante:
+Detecção de código bloqueante. Sem construtor com argumentos e sem `analyzeCode()`/
+`startRuntimeDetection()` — API real é baseada em varredura, não monitoramento
+contínuo em runtime:
 
 ```php
-class BlockingCodeDetector
+final class BlockingCodeDetector
 {
-    private array $blockingFunctions = [
-        'sleep', 'usleep', 'time_nanosleep',
-        'file_get_contents', 'fopen', 'fread',
-        'curl_exec', 'mysqli_query', 'pg_query',
-        'redis_connect', 'memcache_connect'
-    ];
-    
-    public function analyzeCode(string $code): array
-    {
-        $parser = new Parser(new PhpParser\Lexer\Emulative());
-        $ast = $parser->parse($code);
-        
-        $visitor = new BlockingCodeVisitor($this->blockingFunctions);
-        $traverser = new NodeTraverser();
-        $traverser->addVisitor($visitor);
-        $traverser->traverse($ast);
-        
-        return $visitor->getBlockingCalls();
-    }
-    
-    public function startRuntimeDetection(): void
-    {
-        // Monitor function calls em runtime
-        $this->registerTickFunction();
-    }
+    // Listas reais de funções: BlockingCodeDetector::BLOCKING_FUNCTIONS (bloqueio grave)
+    // e BlockingCodeDetector::WARNING_FUNCTIONS (alerta) — confira o código-fonte para a lista completa
+
+    public function scanFile(string $filePath): array { /* ... */ }
+    public function scanCode(string $code, string $context = 'unknown'): array { /* ... */ }
+    public function getViolations(): array { /* ... */ }
+}
+```
+
+Uso real:
+
+```php
+$detector = new BlockingCodeDetector();
+$violations = $detector->scanFile(__DIR__ . '/routes.php');
+// ou: $detector->scanCode(file_get_contents($path), 'routes.php');
+
+foreach ($violations as $violation) {
+    // trate cada violação encontrada
 }
 ```
 
@@ -745,6 +729,10 @@ class AssertionHelper
 
 ### **Configuração de Produção**
 
+`config/reactphp.php` só tem as chaves `server`, `middleware`, `loop`, `performance`
+— não existem chaves `security`/`monitoring`. Isolamento, memory guard e detecção de
+código bloqueante são instanciados em código (ver "Sistema de Segurança" acima):
+
 ```php
 // config/reactphp.php
 return [
@@ -752,24 +740,20 @@ return [
         'debug' => false,
         'streaming' => true,
         'max_concurrent_requests' => 1000,
-        'request_body_size_limit' => 16777216, // 16MB
-        'request_body_buffer_size' => 8192,    // 8KB
+        'request_body_size_limit' => 67108864, // 64MB (default real)
+        'request_body_buffer_size' => 8192,
     ],
-    'security' => [
-        'enable_request_isolation' => true,
-        'enable_memory_guard' => true,
-        'enable_blocking_detection' => true,
-        'memory_limit_warning' => 134217728,   // 128MB
-        'memory_limit_critical' => 268435456,  // 256MB
+    'middleware' => [
+        // ...
     ],
-    'monitoring' => [
-        'enable_health_checks' => true,
-        'metrics_retention_hours' => 24,
-        'alert_thresholds' => [
-            'response_time_ms' => 1000,
-            'error_rate_percent' => 5,
-            'memory_usage_percent' => 80,
-        ],
+    'loop' => [
+        'timer_interval' => 0.001,
+        'future_tick_queue_limit' => 1000,
+    ],
+    'performance' => [
+        'enable_profiling' => false,
+        'profile_memory' => false,
+        'gc_collect_cycles_interval' => 1000,
     ],
 ];
 ```
@@ -778,7 +762,7 @@ return [
 
 ```ini
 [program:pivotphp-reactphp]
-command=php /var/www/artisan serve:reactphp --host=0.0.0.0 --port=8080
+command=php /var/www/bin/console serve:reactphp --host=0.0.0.0 --port=8080
 directory=/var/www
 user=www-data
 autostart=true
@@ -842,7 +826,7 @@ tail -f /var/log/pivotphp-reactphp.log
 watch -n 1 'ps aux | grep "serve:reactphp"'
 
 # Analisar com MemoryGuard
-$guard = new MemoryGuard();
+$guard = new MemoryGuard($loop); // LoopInterface obrigatorio
 $guard->startMonitoring();
 ```
 
@@ -850,12 +834,10 @@ $guard->startMonitoring();
 
 #### **3. Blocking Code Detection**
 ```php
-// Enable em desenvolvimento
+// Verificar código suspeito (varredura, não monitoramento em runtime)
 $detector = new BlockingCodeDetector();
-$detector->startRuntimeDetection();
-
-// Verificar código suspeito
-$blockingCalls = $detector->analyzeCode($sourceCode);
+$blockingCalls = $detector->scanCode($sourceCode, 'meu-arquivo.php');
+// ou: $detector->scanFile('/caminho/para/arquivo.php');
 ```
 
 #### **4. Test Output Issues**
@@ -871,7 +853,7 @@ $result = $this->withoutOutput(function() {
 #### **Health Check Endpoint**
 ```php
 $app->get('/health', function($req, $res) {
-    $monitor = new HealthMonitor();
+    $monitor = new HealthMonitor($loop, $logger); // LoopInterface, LoggerInterface obrigatorios
     return $res->json($monitor->getHealthStatus());
 });
 ```
@@ -899,4 +881,4 @@ $app->get('/metrics', function($req, $res) {
 - [PSR-7 HTTP Message Interface](https://www.php-fig.org/psr/psr-7/)
 - [PSR-15 HTTP Server Request Handlers](https://www.php-fig.org/psr/psr-15/)
 
-**🎯 Esta documentação reflete a implementação real da v0.1.0, testada e validada em produção.**
+**🎯 Este documento vem sendo revisado para refletir com precisão a implementação real da v0.1.0 — parte do conteúdo já foi corrigida (assinaturas de construtor, config real), mas nem toda a página foi auditada linha a linha ainda.**

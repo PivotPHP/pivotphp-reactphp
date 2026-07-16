@@ -65,7 +65,7 @@ $app->post('/data', function($req, $res) {
 });
 
 // ✅ Comando console
-php artisan serve:reactphp --host=0.0.0.0 --port=8080
+php bin/console serve:reactphp --host=0.0.0.0 --port=8080
 
 // ✅ Configurações existentes
 return [
@@ -83,7 +83,7 @@ Você ganha automaticamente:
 
 - **POST/PUT/PATCH requests** agora funcionam 100%
 - **Melhor performance** com helpers internos
-- **Maior estabilidade** com 113 testes passando
+- **Maior estabilidade** com 180 testes automatizados (contagem atual)
 - **Monitoramento básico** de memória e performance
 - **Headers de segurança** automáticos
 
@@ -128,7 +128,7 @@ use PivotPHP\ReactPHP\Monitoring\HealthMonitor;
 
 // Endpoint de health check
 $app->get('/health', function($request, $response) {
-    $monitor = new HealthMonitor();
+    $monitor = new HealthMonitor($loop, $logger); // LoopInterface, LoggerInterface obrigatorios
     return $response->json($monitor->getHealthStatus());
 });
 
@@ -165,56 +165,28 @@ $app->post('/api/secure', function($request, $response) {
 
 ### **Segurança Avançada**
 
+`config/reactphp.php` não tem (e nunca teve) chaves `security`/`monitoring` — isolamento
+de requisição, guarda de memória e detecção de código bloqueante são classes que você
+instancia diretamente em código, não flags de config nem env vars:
+
 ```php
-// config/reactphp.php
-return [
-    'server' => [
-        // Configurações existentes...
-        'debug' => env('APP_DEBUG', false),
-        'streaming' => env('REACTPHP_STREAMING', false),
-        'max_concurrent_requests' => env('REACTPHP_MAX_CONCURRENT', 100),
-    ],
+use PivotPHP\ReactPHP\Security\{RequestIsolation, MemoryGuard, BlockingCodeDetector};
 
-    // ✨ NOVO - Configurações de segurança (opcionais)
-    'security' => [
-        'enable_request_isolation' => true,  // Isolamento entre requisições
-        'enable_memory_guard' => true,       // Monitoramento de memória
-        'enable_blocking_detection' => false, // Detecção de código bloqueante (dev only)
-        'memory_limit_warning' => 134217728,  // 128MB
-        'memory_limit_critical' => 268435456, // 256MB
-    ],
+$isolation = new RequestIsolation();
+$guard = new MemoryGuard($loop); // LoopInterface obrigatório
+$guard->startMonitoring();
 
-    // ✨ NOVO - Monitoramento (opcional)
-    'monitoring' => [
-        'enable_health_checks' => true,
-        'metrics_retention_hours' => 24,
-        'alert_thresholds' => [
-            'response_time_ms' => 1000,
-            'error_rate_percent' => 5,
-            'memory_usage_percent' => 80,
-        ],
-    ],
-];
+$detector = new BlockingCodeDetector();
+// use scanFile()/scanCode() — não existe analyzeCode() nem startRuntimeDetection()
 ```
 
-### **Novas Variáveis de Ambiente (Opcionais)**
-
-```bash
-# .env - Adicionar se quiser usar os novos recursos
-
-# Monitoramento
-REACTPHP_ENABLE_MONITORING=true
-REACTPHP_HEALTH_CHECKS=true
-
-# Segurança
-REACTPHP_REQUEST_ISOLATION=true
-REACTPHP_MEMORY_GUARD=true
-REACTPHP_MEMORY_WARNING=134217728
-REACTPHP_MEMORY_CRITICAL=268435456
-
-# Detecção de código bloqueante (apenas desenvolvimento)
-REACTPHP_BLOCKING_DETECTION=false
-```
+As únicas chaves reais de `config/reactphp.php` são `server`, `middleware`, `loop`,
+`performance` — veja [README.md](../README.md#-configuração) para a lista completa e
+as env vars que cada uma realmente lê (`REACTPHP_STREAMING`,
+`REACTPHP_MAX_CONCURRENT_REQUESTS`, `REACTPHP_REQUEST_BODY_SIZE_LIMIT`, etc.).
+`REACTPHP_ENABLE_MONITORING`, `REACTPHP_HEALTH_CHECKS`, `REACTPHP_REQUEST_ISOLATION`,
+`REACTPHP_MEMORY_GUARD`, `REACTPHP_MEMORY_WARNING`, `REACTPHP_MEMORY_CRITICAL` e
+`REACTPHP_BLOCKING_DETECTION` não são lidas por nenhum código deste pacote.
 
 ## 🧪 Validação da Migração
 
@@ -232,7 +204,7 @@ composer phpstan
 composer cs:check
 
 # 4. Iniciar servidor de teste
-php artisan serve:reactphp --host=localhost --port=8080
+php bin/console serve:reactphp --host=localhost --port=8080
 ```
 
 ### **Teste de POST Routes (Agora Funcionam!)**
@@ -357,7 +329,7 @@ $app->use(function($request, $response, $next) {
 - ✅ Monitoramento integrado
 - ✅ Isolamento automático
 - ✅ Headers de segurança
-- ✅ 113 testes passando
+- ✅ 180 testes automatizados (contagem atual)
 - ✅ PHPStan Level 9
 - ✅ PSR-12 compliance
 

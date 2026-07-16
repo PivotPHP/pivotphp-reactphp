@@ -94,15 +94,17 @@ class UserService {
 
 ### Limites Obrigatórios
 
+`config/reactphp.php` não tem uma chave `memory_guard` — configure os limites passando
+um array para o construtor de `MemoryGuard` diretamente:
+
 ```php
-// config/reactphp.php
-return [
-    'memory_guard' => [
-        'max_memory' => 256 * 1024 * 1024, // 256MB máximo
-        'warning_threshold' => 200 * 1024 * 1024, // Alerta em 200MB
-        'auto_restart_threshold' => 300 * 1024 * 1024, // Restart em 300MB
-    ],
-];
+use PivotPHP\ReactPHP\Security\MemoryGuard;
+
+$guard = new MemoryGuard($loop, [
+    'max_memory' => 256 * 1024 * 1024, // 256MB máximo (default real)
+    'warning_threshold' => 200 * 1024 * 1024, // Alerta em 200MB (default real)
+]);
+$guard->startMonitoring();
 ```
 
 ### Limpeza de Recursos
@@ -134,11 +136,15 @@ $readStream->on('data', function($chunk) {
 
 ### Configuração Obrigatória
 
+`SecurityMiddleware` implementa PSR-15 (`process(ServerRequestInterface, RequestHandlerInterface): ResponseInterface`,
+não o padrão Express `handle($req, $res, $next)`). Construtor real:
+`__construct(RequestIsolationInterface $isolation, array $config = [], ?LoggerInterface $logger = null)`
+— o segundo argumento é o array de config diretamente, não uma instância de
+`GlobalStateSandbox` (essa classe não é usada como parâmetro aqui):
+
 ```php
-// Middleware de segurança DEVE ser adicionado
 $app->use(new SecurityMiddleware(
-    $app->make(RequestIsolation::class),
-    $app->make(GlobalStateSandbox::class),
+    new RequestIsolation(),
     [
         'rate_limit' => [
             'enabled' => true,
@@ -249,8 +255,10 @@ $logger->debug('Debug data', ['data' => $data]);
 // .env.local
 APP_ENV=development
 APP_DEBUG=true
-REACTPHP_SECURITY_SCAN=false # Desabilita scan em dev
 ```
+
+Não há uma env var `REACTPHP_SECURITY_SCAN` lida por este pacote — para desabilitar
+`BlockingCodeDetector` em desenvolvimento, simplesmente não o instancie/registre.
 
 ## 8. ⚡ Checklist de Produção
 
@@ -305,8 +313,12 @@ if (!$result['summary']['safe']) {
 
 ## 10. 📋 Configuração de Segurança Completa
 
+`config/reactphp.php` não tem chaves `security`/`memory_guard`/`monitoring` — só
+`server`, `middleware`, `loop`, `performance`. Segurança é montada em código,
+instanciando cada componente com seu próprio array de config:
+
 ```php
-// config/reactphp.php
+// config/reactphp.php — chaves reais
 return [
     'server' => [
         'debug' => false,
@@ -314,31 +326,27 @@ return [
         'max_concurrent_requests' => 1000,
         'request_body_size_limit' => 10 * 1024 * 1024, // 10MB
     ],
-    
-    'security' => [
-        'enable_isolation' => true,
-        'enable_sandbox' => true,
-        'scan_blocking_code' => true,
-        'scan_paths' => ['app', 'src'],
-    ],
-    
-    'memory_guard' => [
-        'max_memory' => 256 * 1024 * 1024,
-        'warning_threshold' => 200 * 1024 * 1024,
-        'gc_threshold' => 100 * 1024 * 1024,
-        'check_interval' => 10.0,
-        'leak_detection_enabled' => true,
-    ],
-    
-    'monitoring' => [
-        'thresholds' => [
-            'memory_usage_percent' => 80,
-            'avg_response_time_ms' => 100,
-            'error_rate_percent' => 5,
-            'event_loop_lag_ms' => 50,
-        ],
-    ],
+    'middleware' => [/* ... */],
+    'loop' => [/* ... */],
+    'performance' => [/* ... */],
 ];
+```
+
+```php
+// Segurança montada em código, não em config/reactphp.php
+use PivotPHP\ReactPHP\Security\{RequestIsolation, MemoryGuard, BlockingCodeDetector};
+use PivotPHP\ReactPHP\Middleware\SecurityMiddleware;
+
+$isolation = new RequestIsolation();
+$guard = new MemoryGuard($loop, [
+    'max_memory' => 256 * 1024 * 1024,
+    'warning_threshold' => 200 * 1024 * 1024,
+]);
+$guard->startMonitoring();
+
+$app->use(new SecurityMiddleware($isolation, [
+    'rate_limit' => ['enabled' => true, 'max_requests' => 100, 'window_seconds' => 60],
+]));
 ```
 
 ---

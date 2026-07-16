@@ -1,6 +1,6 @@
 # 🚀 PivotPHP ReactPHP v0.1.0 - Primeira Release Estável
 
-**Data de Release**: Janeiro 2025  
+**Data de Release**: 10 de Julho de 2025  
 **Versão**: 0.1.0  
 **Status**: Release Estável  
 
@@ -9,7 +9,7 @@ Esta é a primeira release estável da extensão PivotPHP ReactPHP, oferecendo i
 ## 🎯 Destaques da Release
 
 ### ✨ **Estabilidade e Qualidade**
-- **100% dos testes passando** (113 testes, 319 assertions)
+- **180 testes automatizados (contagem atual; consulte o CI para status de aprovação)
 - **PHPStan Level 9** - Análise estática máxima
 - **PSR-12 compliant** - Padrão de codificação rigoroso
 - **Cobertura de testes abrangente** com helpers especializados
@@ -121,8 +121,8 @@ RequestHelper::getClientIdentifier($request);
 ## 🚀 Performance e Estabilidade
 
 ### **Métricas de Teste**
-- **113 testes** executados com sucesso
-- **319 assertions** validadas
+- **180 testes** automatizados (contagem atual)
+- **444 assertions** (contagem atual)
 - **0 failures, 0 errors** - 100% de sucesso
 - **13 testes skipped** (performance/benchmarking)
 
@@ -256,7 +256,7 @@ $app->get('/', fn($req, $res) => $res->json(['message' => 'Hello ReactPHP!']));
 $app->post('/api/data', fn($req, $res) => $res->json(['received' => $req->body]));
 
 // Iniciar servidor
-php artisan serve:reactphp --host=0.0.0.0 --port=8080
+php bin/console serve:reactphp --host=0.0.0.0 --port=8080
 ```
 
 **🎉 PivotPHP ReactPHP v0.1.0 - Pronto para produção!**

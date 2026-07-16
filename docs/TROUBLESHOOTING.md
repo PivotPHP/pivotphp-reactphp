@@ -4,9 +4,32 @@
 
 Based on real development experience and issues encountered during implementation.
 
+> **Nota**: as três seções abaixo ("PSR-7 Compatibility Issues", "Header Access
+> Issues", "Express.js Pattern Issues") descreviam uma arquitetura anterior à
+> introdução de suporte PSR-7 nativo neste pacote (`CHANGELOG.md`, v0.0.2:
+> "Removed obsolete Psr7CompatibilityAdapter"). O exemplo real e funcional deste
+> pacote (`examples/server.php`) usa `ServerRequestInterface`/`ResponseInterface`
+> PSR-7 diretamente, com handlers que **retornam** `ResponseInterface` — não o
+> padrão `function($req, $res): void` descrito abaixo. Corrigido o que dava para
+> verificar contra `examples/server.php`; o restante foi atualizado com uma nota
+> de cautela em vez de reescrito linha a linha.
+
 ---
 
 ## PSR-7 Compatibility Issues
+
+### Este workaround está obsoleto
+
+O script `switch-psr7-version.php` e o erro de incompatibilidade de `getProtocolVersion()`
+descrito abaixo eram um problema real quando `pivotphp/core` só suportava PSR-7 v1.x
+*ou* v2.x, exigindo a troca manual. Desde então, `pivotphp/core` passou a suportar as
+duas versões simultaneamente sem precisar do script (ver `pivotphp-core`, changelog
+da versão que corrigiu a compatibilidade real com `psr/http-message` 2.0). Se você
+ainda encontrar esse erro, confira primeiro se está usando uma versão desatualizada
+de `pivotphp/core` antes de recorrer ao script abaixo.
+
+<details>
+<summary>Conteúdo original (pode estar obsoleto)</summary>
 
 ### Error: "Declaration of React\Http\Io\AbstractMessage::getProtocolVersion() must be compatible with..."
 
@@ -30,105 +53,91 @@ php vendor/pivotphp/core/scripts/switch-psr7-version.php --check
 
 **Prevention:** Always use PSR-7 v1.x when integrating with ReactPHP.
 
+</details>
+
 ---
 
 ## Request/Response Handling Issues
 
-### Error: "Argument #1 ($request) must be of type ?PivotPHP\Core\Http\Request, PivotPHP\Core\Http\Psr7\ServerRequest given"
+### `RequestBridge::convertFromReact()` retorna PSR-7 `ServerRequestInterface`
 
-**Symptoms:**
-```
-PivotPHP\Core\Core\Application::handle(): Argument #1 ($request) must be of type 
-?PivotPHP\Core\Http\Request, PivotPHP\Core\Http\Psr7\ServerRequest given
-```
-
-**Cause:** RequestBridge is returning PSR-7 ServerRequest instead of PivotPHP's native Request class.
-
-**Solution:** Ensure RequestBridge converts to PivotPHP Request:
-```php
-// In RequestBridge.php
-public function convertFromReact(ServerRequestInterface $reactRequest): \PivotPHP\Core\Http\Request
-{
-    // Convert to PivotPHP Request, not PSR-7 ServerRequest
-    return new \PivotPHP\Core\Http\Request($method, $path, $path);
-}
-```
-
-**Prevention:** Always check return types match expected interfaces.
+Assinatura real (`src/Bridge/RequestBridge.php:29`):
+`convertFromReact(ServerRequestInterface $reactRequest): ServerRequestInterface`.
+Não converte para a classe híbrida `PivotPHP\Core\Http\Request` — o erro descrito
+originalmente nesta seção partia da premissa contrária. Se você receber um erro de
+tipo aqui, confira se está passando `ServerRequestInterface` corretamente pela cadeia
+de handlers, não tentando forçar conversão para `\PivotPHP\Core\Http\Request`.
 
 ---
 
 ## Header Access Issues
+
+### Use a API PSR-7 padrão, não `->header('camelCase')`
+
+`examples/server.php` (o exemplo real e funcional deste pacote) acessa headers via
+`$request->getHeaders()` PSR-7 puro. Não confirmamos, dentro deste repositório, que
+`->header('camelCase')` seja a API real de acesso a headers — se você encontrar esse
+método, prefira a forma PSR-7 abaixo, que sabemos que funciona:
+
+```php
+// ✅ PSR-7 padrão — confirmado em examples/server.php
+$contentType = $request->getHeaderLine('Content-Type');
+$auth = $request->getHeaderLine('Authorization');
+$allHeaders = $request->getHeaders();
+```
+
+<details>
+<summary>Conteúdo original (não verificado nesta correção — pode estar obsoleto)</summary>
 
 ### Error: Headers Return Null
 
 **Symptoms:**
 ```php
 $contentType = $request->header('Content-Type'); // Returns null
-$auth = $request->header('Authorization');       // Returns null
 ```
 
 **Cause:** PivotPHP converts header names to camelCase during Request construction.
 
-**Solution:** Use camelCase header names:
-```php
-// ❌ Wrong - returns null
-$contentType = $request->header('Content-Type');
-$auth = $request->header('Authorization');
-$apiKey = $request->header('X-API-Key');
+**Solution:** Use camelCase header names (`contentType`, `authorization`, `xApiKey`, etc.)
 
-// ✅ Correct - returns actual values
-$contentType = $request->header('contentType');
-$auth = $request->header('authorization');
-$apiKey = $request->header('xApiKey');
-
-// ✅ Alternative methods
-$contentType = $request->headers->contentType;
-$contentType = $request->headers->contentType();
-```
-
-**Header Conversion Reference:**
-- `Content-Type` → `contentType`
-- `Authorization` → `authorization`
-- `X-API-Key` → `xApiKey`
-- `Accept-Language` → `acceptLanguage`
-- `User-Agent` → `userAgent`
-- `X-Forwarded-For` → `xForwardedFor`
-
-**Prevention:** Always use camelCase when accessing headers programmatically.
+</details>
 
 ---
 
 ## Express.js Pattern Issues
 
-### Error: Controllers Trying to Return Response
+### Route handlers retornam `ResponseInterface` — não são `void`
 
-**Symptoms:**
+`examples/server.php` mostra o padrão real: handlers de rota recebem
+`ServerRequestInterface` (e `array $args` para parâmetros de rota) e **retornam**
+`ResponseInterface`, sem um segundo parâmetro de response:
+
 ```php
-// This pattern doesn't work with PivotPHP
-public function index(Request $request): Response
-{
-    return Response::json($data);
-}
-```
-
-**Cause:** PivotPHP uses Express.js style where response is passed as parameter.
-
-**Solution:** Use Express.js pattern:
-```php
-// ✅ Correct Express.js style
-public function index(Request $request, Response $response): void
-{
-    $response->json($data);
-}
-
-// ✅ Route definition
-$router->get('/users', function ($request, $response) {
-    $response->json(['users' => []]);
+// ✅ Confirmado em examples/server.php
+$router->get('/hello/{name}', function (ServerRequestInterface $request, array $args): ResponseInterface {
+    return Response::json(['message' => "Hello, {$args['name']}!"]);
 });
 ```
 
-**Prevention:** Always use `(request, response)` parameters and return `void`.
+Middleware (`$app->use(...)`), por sua vez, usa um padrão de 3 argumentos que
+**retorna** a resposta (não é `void`):
+
+```php
+// ✅ Confirmado em examples/server.php
+$app->use(function (ServerRequestInterface $request, ResponseInterface $response, callable $next): ResponseInterface {
+    $response = $next($request, $response);
+    return $response->withHeader('X-Server', 'PivotPHP/ReactPHP');
+});
+```
+
+<details>
+<summary>Conteúdo original (contradiz o exemplo real acima — mantido só como histórico)</summary>
+
+Versões anteriores desta página descreviam um padrão `function($req, $res): void` para
+rotas, com a resposta sendo enviada via `$response->json($data)` em vez de retornada.
+Isso não bate com `examples/server.php` — trate como obsoleto.
+
+</details>
 
 ---
 
